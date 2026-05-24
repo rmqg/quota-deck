@@ -556,35 +556,177 @@ input:focus {
 @media (max-width: 760px) {
   .shell {
     width: min(1120px, calc(100% - 20px));
-    padding-top: 20px;
+    padding: 12px 0 24px;
   }
 
   .topbar,
-  .account-heading,
   .scan-row {
     align-items: stretch;
     flex-direction: column;
   }
 
+  .topbar {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .eyebrow {
+    margin-bottom: 2px;
+    font-size: 11px;
+  }
+
   h1 {
-    font-size: 28px;
+    font-size: 24px;
   }
 
   .account-form,
   .import-form,
   .auth-grid,
-  .scan-row,
-  .status-strip,
-  .limits {
+  .scan-row {
     grid-template-columns: 1fr;
   }
 
+  .account-panel {
+    padding: 10px;
+  }
+
+  .beginner-guide {
+    margin: 10px 0;
+  }
+
   .top-actions {
-    align-items: stretch;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+  }
+
+  .primary-button,
+  .ghost-button,
+  .account-form button,
+  .stack-form button,
+  .top-actions select,
+  input {
+    min-height: 36px;
+  }
+
+  .primary-button,
+  .ghost-button,
+  .account-form button,
+  .stack-form button {
+    padding: 0 12px;
+  }
+
+  .account-form {
+    gap: 8px;
+  }
+
+  label {
+    gap: 4px;
+  }
+
+  .manual-details,
+  .guide-details {
+    margin-top: 8px;
+  }
+
+  .guide-details ol {
+    margin-top: 8px;
+  }
+
+  .guide-details li + li {
+    margin-top: 5px;
+  }
+
+  .status-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 10px 0;
+  }
+
+  .status-strip > div {
+    min-height: 48px;
+    padding: 8px 10px;
+  }
+
+  .status-strip strong {
+    margin-top: 2px;
+    font-size: 18px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .account-list {
+    gap: 8px;
+  }
+
+  .account-row {
+    padding: 10px;
+  }
+
+  .account-heading {
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .account-name {
+    font-size: 16px;
+  }
+
+  .account-path {
+    display: none;
   }
 
   .row-actions {
+    gap: 6px;
     justify-content: space-between;
+  }
+
+  .plan-badge {
+    min-height: 24px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .icon-button {
+    width: 30px;
+    height: 30px;
+    font-size: 18px;
+  }
+
+  .limits {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .limit-meta {
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .limit-name,
+  .limit-left {
+    font-size: 12px;
+  }
+
+  .limit-left {
+    white-space: nowrap;
+  }
+
+  .bar {
+    height: 10px;
+  }
+
+  .reset-text,
+  .row-message {
+    margin-top: 4px;
+    font-size: 11px;
+  }
+
+  .reset-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
