@@ -618,8 +618,15 @@ async function handleApi(req, res, url) {
       json(res, 404, { error: "Account not found" });
       return;
     }
-    await saveAccounts(accounts.filter((item) => item.id !== id));
-    json(res, 200, { ok: true });
+    const remainingAccounts = accounts.filter(
+      (item) => !(item.id === id && item.userId === user.id),
+    );
+    await saveAccounts(remainingAccounts);
+    json(res, 200, {
+      ok: true,
+      deletedId: id,
+      remaining: remainingAccounts.filter((item) => item.userId === user.id).length,
+    });
     return;
   }
 

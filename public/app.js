@@ -23,6 +23,7 @@ const translations = {
     noAccounts: "暂无账号",
     refreshing: "刷新中",
     pending: "等待刷新",
+    refreshReturnedNoResults: "刷新没有返回账号结果",
     updatedIn: "更新耗时",
     resetUnavailable: "无重置时间",
     resets: "重置于",
@@ -58,6 +59,7 @@ const translations = {
     noAccounts: "尚無帳號",
     refreshing: "重新整理中",
     pending: "等待重新整理",
+    refreshReturnedNoResults: "重新整理未返回帳號結果",
     updatedIn: "更新耗時",
     resetUnavailable: "無重置時間",
     resets: "重置於",
@@ -93,6 +95,7 @@ const translations = {
     noAccounts: "No accounts",
     refreshing: "Refreshing",
     pending: "Pending refresh",
+    refreshReturnedNoResults: "Refresh returned no account results",
     updatedIn: "updated in",
     resetUnavailable: "reset time unavailable",
     resets: "resets",
@@ -128,6 +131,7 @@ const translations = {
     noAccounts: "アカウントなし",
     refreshing: "更新中",
     pending: "更新待ち",
+    refreshReturnedNoResults: "更新結果にアカウントが含まれていません",
     updatedIn: "更新時間",
     resetUnavailable: "リセット時刻なし",
     resets: "リセット",
@@ -165,6 +169,7 @@ let allowRegistration = false;
 let accounts = [];
 let results = new Map();
 let requestNonce = 0;
+let refreshAllInFlight = null;
 
 function t(key) {
   return translations[lang]?.[key] || translations.en[key] || key;
@@ -265,9 +270,10 @@ function render() {
   registerForm.hidden = !allowRegistration;
   if (!currentUser) return;
 
+  const visibleResults = accounts.map((account) => results.get(account.id)).filter(Boolean);
   accountCount.textContent = String(accounts.length);
-  healthyCount.textContent = String([...results.values()].filter((result) => result.ok).length);
-  const lastRefresh = [...results.values()].map((result) => result.refreshedAt).sort().at(-1);
+  healthyCount.textContent = String(visibleResults.filter((result) => result.ok).length);
+  const lastRefresh = visibleResults.map((result) => result.refreshedAt).sort().at(-1);
   updatedAt.textContent = lastRefresh ? formatTime(lastRefresh) : "-";
   accountList.replaceChildren();
 
@@ -322,21 +328,54 @@ async function loadAccounts() {
   if (!currentUser) return;
   const body = await api("/api/accounts");
   accounts = body.accounts;
+  const accountIds = new Set(accounts.map((account) => account.id));
+  results = new Map([...results].filter(([id]) => accountIds.has(id)));
   render();
 }
 
-async function refreshAll() {
-  if (!currentUser) return;
+function applyRefreshResults(body) {
+  const incoming = Array.isArray(body?.results) ? body.results : [];
+  const next = new Map(results);
+  const seen = new Set();
+  for (const result of incoming) {
+    const id = result?.account?.id;
+    if (!id) continue;
+    seen.add(id);
+    next.set(id, result);
+  }
+
+  if (accounts.length && seen.size < accounts.length) {
+    const now = new Date().toISOString();
+    for (const account of accounts) {
+      if (seen.has(account.id) || next.has(account.id)) continue;
+      next.set(account.id, {
+        account,
+        ok: false,
+        refreshedAt: now,
+        latencyMs: 0,
+        error: t("refreshReturnedNoResults"),
+      });
+    }
+  }
+  results = next;
+}
+
+function refreshAll() {
+  if (!currentUser) return Promise.resolve();
+  if (refreshAllInFlight) return refreshAllInFlight;
   refreshAllButton.disabled = true;
   refreshAllButton.textContent = t("refreshing");
-  try {
+  refreshAllInFlight = (async () => {
     const body = await api("/api/limits/refresh", { method: "POST" });
-    results = new Map(body.results.map((result) => [result.account.id, result]));
+    applyRefreshResults(body);
     render();
-  } finally {
+  })();
+
+  return refreshAllInFlight.finally(() => {
+    refreshAllInFlight = null;
     refreshAllButton.disabled = false;
     refreshAllButton.textContent = t("refresh");
-  }
+  });
 }
 
 async function refreshOne(id) {
@@ -346,9 +385,21 @@ async function refreshOne(id) {
 }
 
 async function deleteAccount(id) {
-  await api(`/api/accounts/${encodeURIComponent(id)}`, { method: "DELETE" });
+  const previousAccounts = accounts;
+  const previousResults = results;
+  accounts = accounts.filter((account) => account.id !== id);
+  results = new Map(results);
   results.delete(id);
-  await loadAccounts();
+  render();
+
+  try {
+    await api(`/api/accounts/${encodeURIComponent(id)}`, { method: "DELETE" });
+  } catch (error) {
+    accounts = previousAccounts;
+    results = previousResults;
+    render();
+    window.alert(error.message);
+  }
 }
 
 async function submitAuthForm(form, endpoint) {
