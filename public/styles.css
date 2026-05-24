@@ -234,6 +234,10 @@ button:disabled {
   margin-top: 14px;
 }
 
+.beginner-guide {
+  margin: 16px 0;
+}
+
 .manual-details summary,
 .guide-details summary {
   color: var(--strong);
@@ -251,6 +255,41 @@ button:disabled {
 
 .guide-details li + li {
   margin-top: 8px;
+}
+
+.guide-body {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.guide-body h3 {
+  margin: 16px 0 6px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.guide-body h3:first-child {
+  margin-top: 0;
+}
+
+.guide-body p,
+.guide-body ol,
+.guide-body ul {
+  margin: 8px 0 0;
+}
+
+.guide-body ol,
+.guide-body ul {
+  padding-left: 20px;
+}
+
+.guide-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text);
+  overflow-wrap: anywhere;
 }
 
 .manual-details .account-form {

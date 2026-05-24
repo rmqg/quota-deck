@@ -34,6 +34,24 @@ const translations = {
     weekly: "每周额度",
     authRequired: "请先登录",
     importDone: "已导入账号",
+    beginnerGuideTitle: "小白使用说明",
+    beginnerGuideBody: `
+      <h3>这个页面能做什么</h3>
+      <p>QuotaDeck 用来查看 Codex CLI 里显示的两个额度：5 小时额度和每周额度。它不会查看 OpenAI API 账单，也不覆盖 Claude Pro。</p>
+      <h3>第一次使用</h3>
+      <ol>
+        <li>先注册一个本站账号。公开部署时，创建好自己的账号后，应在服务器里把 <code>ALLOW_REGISTRATION</code> 改成 <code>0</code> 并重启容器，避免陌生人注册。</li>
+        <li>在你自己的电脑上确认 Codex CLI 已经登录。一般登录文件在 <code>\${CODEX_HOME:-$HOME/.codex}/auth.json</code>。</li>
+        <li>填写一个容易识别的账号名称，选择 <code>auth.json</code>，点击导入。服务器只保存加密后的凭据。</li>
+        <li>导入后可以点顶部刷新更新所有账号，也可以点每个账号右侧的小刷新只更新那一个账号。</li>
+      </ol>
+      <h3>安全注意</h3>
+      <ul>
+        <li>不要把 <code>auth.json</code> 发到公开聊天、Issue、论坛或别人控制的服务器。</li>
+        <li><code>APP_SECRET</code> 必须长期保持不变；改掉后旧凭据无法解密。</li>
+        <li>不再信任某台服务器时，请重新登录或轮换 Codex 登录，让旧凭据失效。</li>
+      </ul>
+    `,
   },
   "zh-Hant": {
     title: "Codex 額度監控",
@@ -70,6 +88,24 @@ const translations = {
     weekly: "每週額度",
     authRequired: "請先登入",
     importDone: "已匯入帳號",
+    beginnerGuideTitle: "新手使用說明",
+    beginnerGuideBody: `
+      <h3>這個頁面能做什麼</h3>
+      <p>QuotaDeck 用來查看 Codex CLI 裡顯示的兩個額度：5 小時額度和每週額度。它不會查看 OpenAI API 帳單，也不涵蓋 Claude Pro。</p>
+      <h3>第一次使用</h3>
+      <ol>
+        <li>先註冊一個本站帳號。公開部署時，建立好自己的帳號後，應在伺服器把 <code>ALLOW_REGISTRATION</code> 改成 <code>0</code> 並重啟容器，避免陌生人註冊。</li>
+        <li>在你自己的電腦上確認 Codex CLI 已經登入。一般登入檔在 <code>\${CODEX_HOME:-$HOME/.codex}/auth.json</code>。</li>
+        <li>填寫一個容易識別的帳號名稱，選擇 <code>auth.json</code>，點擊匯入。伺服器只保存加密後的憑據。</li>
+        <li>匯入後可以點頂部重新整理更新所有帳號，也可以點每個帳號右側的小重新整理只更新那一個帳號。</li>
+      </ol>
+      <h3>安全注意</h3>
+      <ul>
+        <li>不要把 <code>auth.json</code> 發到公開聊天、Issue、論壇或別人控制的伺服器。</li>
+        <li><code>APP_SECRET</code> 必須長期保持不變；改掉後舊憑據無法解密。</li>
+        <li>不再信任某台伺服器時，請重新登入或輪換 Codex 登入，讓舊憑據失效。</li>
+      </ul>
+    `,
   },
   en: {
     title: "Codex Limit Monitor",
@@ -106,6 +142,24 @@ const translations = {
     weekly: "Weekly limit",
     authRequired: "Please login first",
     importDone: "Account imported",
+    beginnerGuideTitle: "Beginner guide",
+    beginnerGuideBody: `
+      <h3>What this page does</h3>
+      <p>QuotaDeck shows the two limits that Codex CLI displays: the 5-hour limit and the weekly limit. It does not monitor OpenAI API billing, and it does not cover Claude Pro.</p>
+      <h3>First-time setup</h3>
+      <ol>
+        <li>Create a local QuotaDeck account. For public deployments, create your own account first, then set <code>ALLOW_REGISTRATION</code> to <code>0</code> on the server and restart the container.</li>
+        <li>Make sure Codex CLI is logged in on your own computer. The login file is usually <code>\${CODEX_HOME:-$HOME/.codex}/auth.json</code>.</li>
+        <li>Enter a recognizable account name, choose <code>auth.json</code>, and import it. The server stores only encrypted credentials.</li>
+        <li>Use the top refresh button for all accounts, or the small refresh button on one account to refresh only that account.</li>
+      </ol>
+      <h3>Security notes</h3>
+      <ul>
+        <li>Do not post <code>auth.json</code> in public chats, issues, forums, or servers you do not control.</li>
+        <li>Keep <code>APP_SECRET</code> stable. Changing it makes old encrypted credentials unreadable.</li>
+        <li>If you stop trusting a server, log in again or rotate your Codex login so the old credential becomes invalid.</li>
+      </ul>
+    `,
   },
   ja: {
     title: "Codex 制限モニター",
@@ -142,6 +196,24 @@ const translations = {
     weekly: "週間制限",
     authRequired: "先にログインしてください",
     importDone: "アカウントをインポートしました",
+    beginnerGuideTitle: "初心者向けガイド",
+    beginnerGuideBody: `
+      <h3>このページでできること</h3>
+      <p>QuotaDeck は Codex CLI に表示される 2 つの制限、5 時間制限と週間制限を表示します。OpenAI API の請求利用量や Claude Pro は対象外です。</p>
+      <h3>初回利用</h3>
+      <ol>
+        <li>まず QuotaDeck のローカルアカウントを作成します。公開運用では、自分のアカウントを作成した後、サーバー側で <code>ALLOW_REGISTRATION</code> を <code>0</code> に変更してコンテナを再起動してください。</li>
+        <li>自分の PC で Codex CLI にログイン済みであることを確認します。ログインファイルは通常 <code>\${CODEX_HOME:-$HOME/.codex}/auth.json</code> にあります。</li>
+        <li>分かりやすいアカウント名を入力し、<code>auth.json</code> を選択してインポートします。サーバーには暗号化された認証情報だけが保存されます。</li>
+        <li>上部の更新ボタンで全アカウントを更新できます。各アカウント右側の小さい更新ボタンでは、そのアカウントだけを更新できます。</li>
+      </ol>
+      <h3>セキュリティ注意</h3>
+      <ul>
+        <li><code>auth.json</code> を公開チャット、Issue、フォーラム、自分が管理していないサーバーに投稿しないでください。</li>
+        <li><code>APP_SECRET</code> は維持してください。変更すると既存の暗号化済み認証情報を復号できなくなります。</li>
+        <li>サーバーを信頼しなくなった場合は、Codex に再ログインするかログイン情報をローテーションして、古い認証情報を無効化してください。</li>
+      </ul>
+    `,
   },
 };
 
