@@ -1,0 +1,11 @@
+[
+  {
+    "id": "example",
+    "provider": "codex",
+    "name": "OpenAI Business",
+    "userId": "user-id",
+    "identity": "user@example.com",
+    "encryptedAuth": "v1.iv.tag.ciphertext",
+    "createdAt": "2026-05-24T00:00:00.000Z"
+  }
+]

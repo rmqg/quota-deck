@@ -1,0 +1,8 @@
+node_modules/
+data/accounts.json
+data/users.json
+data/sessions.json
+.env
+caddy-data/
+caddy-config/
+dataset/

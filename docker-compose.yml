@@ -1,0 +1,33 @@
+services:
+  quota-deck:
+    build: .
+    image: quota-deck:local
+    container_name: quota-deck
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATA_DIR: /data
+      PORT: "8787"
+      APP_SECRET: ${APP_SECRET:?set APP_SECRET}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-0}
+    expose:
+      - "8787"
+    volumes:
+      - ./data:/data
+
+  quota-deck-proxy:
+    image: caddy:2-alpine
+    container_name: quota-deck-proxy
+    restart: unless-stopped
+    depends_on:
+      - quota-deck
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy-data:/data
+      - ./caddy-config:/config

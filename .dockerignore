@@ -1,0 +1,9 @@
+.git
+.env
+data/*.json
+!data/accounts.example.json
+node_modules
+caddy-data
+caddy-config
+codex-homes
+dataset

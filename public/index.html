@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QuotaDeck</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">QuotaDeck</p>
+          <h1 data-i18n="title">Codex Limit Monitor</h1>
+        </div>
+        <div class="top-actions">
+          <select id="languageSelect" aria-label="Language">
+            <option value="zh-Hans">简体中文</option>
+            <option value="zh-Hant">繁體中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+          <button id="refreshAll" class="primary-button authed-only" type="button" data-i18n="refresh">Refresh</button>
+          <button id="logoutButton" class="ghost-button authed-only" type="button" data-i18n="logout">Logout</button>
+        </div>
+      </header>
+
+      <section id="authPanel" class="account-panel">
+        <div class="auth-grid">
+          <form id="loginForm" class="stack-form">
+            <h2 data-i18n="loginTitle">Login</h2>
+            <label>
+              <span data-i18n="username">Username</span>
+              <input name="username" autocomplete="username" required />
+            </label>
+            <label>
+              <span data-i18n="password">Password</span>
+              <input name="password" type="password" autocomplete="current-password" required />
+            </label>
+            <button type="submit" data-i18n="login">Login</button>
+          </form>
+
+          <form id="registerForm" class="stack-form">
+            <h2 data-i18n="registerTitle">Create Account</h2>
+            <label>
+              <span data-i18n="username">Username</span>
+              <input name="username" autocomplete="username" required />
+            </label>
+            <label>
+              <span data-i18n="password">Password</span>
+              <input name="password" type="password" autocomplete="new-password" required />
+            </label>
+            <button type="submit" data-i18n="register">Register</button>
+          </form>
+        </div>
+        <p id="authMessage" class="row-message"></p>
+      </section>
+
+      <section id="appPanel" class="authed-only">
+        <section class="account-panel" aria-label="Import account">
+          <form id="importForm" class="account-form import-form">
+            <label>
+              <span data-i18n="accountName">Account Name</span>
+              <input name="name" autocomplete="off" data-i18n-placeholder="accountNamePlaceholder" placeholder="OpenAI Business" required />
+            </label>
+            <label>
+              <span data-i18n="authJson">Codex auth.json</span>
+              <input name="authFile" type="file" accept=".json,application/json" required />
+            </label>
+            <button type="submit" data-i18n="import">Import</button>
+          </form>
+
+          <details class="guide-details" open>
+            <summary data-i18n="guideTitle">How to get auth.json</summary>
+            <ol>
+              <li data-i18n-html="guideOne">On your local machine, find Codex auth: <code>${CODEX_HOME:-$HOME/.codex}/auth.json</code></li>
+              <li data-i18n-html="guideTwo">Upload that file here. It is encrypted at rest and only decrypted into a temporary directory while refreshing limits.</li>
+              <li data-i18n="guideThree">For a public deployment, use a strong site password and rotate Codex login if you no longer trust the server.</li>
+            </ol>
+          </details>
+        </section>
+
+        <section class="status-strip" aria-live="polite">
+          <div>
+            <span class="metric-label" data-i18n="accounts">Accounts</span>
+            <strong id="accountCount">0</strong>
+          </div>
+          <div>
+            <span class="metric-label" data-i18n="healthy">Healthy</span>
+            <strong id="healthyCount">0</strong>
+          </div>
+          <div>
+            <span class="metric-label" data-i18n="updated">Updated</span>
+            <strong id="updatedAt">-</strong>
+          </div>
+        </section>
+
+        <section id="accountList" class="account-list" aria-label="Accounts"></section>
+      </section>
+    </main>
+
+    <template id="accountTemplate">
+      <article class="account-row">
+        <div class="account-heading">
+          <div>
+            <h2 class="account-name"></h2>
+            <p class="account-path"></p>
+          </div>
+          <div class="row-actions">
+            <span class="plan-badge"></span>
+            <button class="icon-button refresh-one" type="button" title="Refresh account" aria-label="Refresh account">↻</button>
+            <button class="icon-button delete-one" type="button" title="Delete account" aria-label="Delete account">×</button>
+          </div>
+        </div>
+        <div class="limits"></div>
+        <p class="row-message"></p>
+      </article>
+    </template>
+
+    <template id="limitTemplate">
+      <div class="limit-line">
+        <div class="limit-meta">
+          <span class="limit-name"></span>
+          <span class="limit-left"></span>
+        </div>
+        <div class="bar" aria-hidden="true">
+          <span class="bar-fill"></span>
+        </div>
+        <div class="reset-text"></div>
+      </div>
+    </template>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
