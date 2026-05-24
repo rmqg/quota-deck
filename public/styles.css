@@ -26,6 +26,23 @@ body {
     sans-serif;
 }
 
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 button,
 input,
 select {
@@ -77,6 +94,11 @@ h1 {
   min-height: 42px;
   padding: 0 18px;
   font-weight: 700;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
 .ghost-button {
@@ -98,6 +120,25 @@ h1 {
   background: #fff;
   color: var(--text);
   padding: 0 10px;
+}
+
+.primary-button:hover,
+.ghost-button:hover,
+.account-form button:hover,
+.stack-form button:hover,
+.scan-row button:hover,
+.icon-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(20, 32, 29, 0.1);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .account-panel {
@@ -263,6 +304,10 @@ input:focus {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 14px 16px;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 
 .metric-label {
@@ -292,6 +337,21 @@ input:focus {
   border-radius: 8px;
   box-shadow: var(--shadow);
   padding: 18px;
+  animation: row-in 180ms ease both;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.account-row:hover {
+  border-color: rgba(22, 138, 192, 0.32);
+  transform: translateY(-1px);
+}
+
+.account-row.is-refreshing {
+  border-color: rgba(102, 204, 255, 0.8);
+  box-shadow: 0 12px 32px rgba(102, 204, 255, 0.14);
 }
 
 .account-heading {
@@ -346,6 +406,16 @@ input:focus {
   color: var(--text);
   font-size: 20px;
   line-height: 1;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.is-refreshing .refresh-one {
+  color: var(--strong);
+  animation: spin 900ms linear infinite;
 }
 
 .delete-one {
@@ -396,7 +466,9 @@ input:focus {
   width: 0%;
   border-radius: inherit;
   background: var(--strong-2);
-  transition: width 180ms ease;
+  transition:
+    width 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms ease;
 }
 
 .bar-fill.low {
@@ -429,6 +501,17 @@ input:focus {
   background: rgba(255, 255, 255, 0.58);
   text-align: center;
   padding: 24px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
 }
 
 @media (max-width: 760px) {

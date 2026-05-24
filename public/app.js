@@ -170,6 +170,7 @@ let accounts = [];
 let results = new Map();
 let requestNonce = 0;
 let refreshAllInFlight = null;
+const refreshingAccountIds = new Set();
 
 function t(key) {
   return translations[lang]?.[key] || translations.en[key] || key;
@@ -265,6 +266,25 @@ function setAuthedState() {
   authPanel.hidden = Boolean(currentUser);
 }
 
+function findAccountRow(id) {
+  return [...accountList.querySelectorAll(".account-row")].find((row) => row.dataset.accountId === id);
+}
+
+function renderPreservingAccount(id) {
+  const previousRow = findAccountRow(id);
+  const previousTop = previousRow?.getBoundingClientRect().top;
+  const previousScrollX = window.scrollX;
+  const previousScrollY = window.scrollY;
+  render();
+
+  const nextRow = findAccountRow(id);
+  if (previousRow && nextRow && Number.isFinite(previousTop)) {
+    window.scrollBy(0, nextRow.getBoundingClientRect().top - previousTop);
+    return;
+  }
+  window.scrollTo(previousScrollX, previousScrollY);
+}
+
 function render() {
   setAuthedState();
   registerForm.hidden = !allowRegistration;
@@ -292,17 +312,22 @@ function render() {
     const limits = fragment.querySelector(".limits");
     const message = fragment.querySelector(".row-message");
     const snapshot = selectedSnapshot(result);
+    const isRefreshing = refreshingAccountIds.has(account.id);
+    const refreshButton = fragment.querySelector(".refresh-one");
 
+    root.dataset.accountId = account.id;
+    root.classList.toggle("is-refreshing", isRefreshing);
     fragment.querySelector(".account-name").textContent = account.name;
     fragment.querySelector(".account-path").textContent = account.provider;
     fragment.querySelector(".plan-badge").textContent = snapshot?.planType || account.provider;
-    fragment.querySelector(".refresh-one").addEventListener("click", () => refreshOne(account.id));
+    refreshButton.disabled = isRefreshing;
+    refreshButton.addEventListener("click", () => refreshOne(account.id));
     fragment.querySelector(".delete-one").addEventListener("click", () => deleteAccount(account.id));
 
     if (result?.ok && snapshot) {
       const windows = [snapshot.primary, snapshot.secondary].filter(Boolean);
       limits.replaceChildren(...windows.map(renderLimit));
-      message.textContent = `${t("updatedIn")} ${result.latencyMs}ms`;
+      message.textContent = isRefreshing ? t("refreshing") : `${t("updatedIn")} ${result.latencyMs}ms`;
       message.classList.remove("error");
     } else if (result && !result.ok) {
       limits.replaceChildren();
@@ -310,7 +335,7 @@ function render() {
       message.classList.add("error");
     } else {
       limits.replaceChildren();
-      message.textContent = t("pending");
+      message.textContent = isRefreshing ? t("refreshing") : t("pending");
       message.classList.remove("error");
     }
     accountList.append(root);
@@ -379,9 +404,28 @@ function refreshAll() {
 }
 
 async function refreshOne(id) {
-  const body = await api(`/api/limits/${encodeURIComponent(id)}/refresh`, { method: "POST" });
-  results.set(body.account.id, body);
-  render();
+  if (refreshingAccountIds.has(id)) return;
+  refreshingAccountIds.add(id);
+  renderPreservingAccount(id);
+
+  try {
+    const body = await api(`/api/limits/${encodeURIComponent(id)}/refresh`, { method: "POST" });
+    results.set(body.account.id, body);
+  } catch (error) {
+    const account = accounts.find((item) => item.id === id);
+    if (account) {
+      results.set(id, {
+        account,
+        ok: false,
+        refreshedAt: new Date().toISOString(),
+        latencyMs: 0,
+        error: error.message,
+      });
+    }
+  } finally {
+    refreshingAccountIds.delete(id);
+    renderPreservingAccount(id);
+  }
 }
 
 async function deleteAccount(id) {
