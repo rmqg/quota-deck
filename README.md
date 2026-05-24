@@ -46,12 +46,6 @@ QuotaDeck 会处理敏感的 Codex 登录文件，所以请先理解这些规则
 
 本项目使用 `GPL-3.0-or-later`。
 
-也就是 GPLv3 或任何后续版本。没有正式的 GPLv4 许可证文本，所以不要写 `GPL-4.0`。标准写法是：
-
-```txt
-SPDX-License-Identifier: GPL-3.0-or-later
-```
-
 完整许可证见 [LICENSE](./LICENSE)。
 
 ## 文件说明
