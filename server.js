@@ -49,7 +49,11 @@ function json(res, status, body, headers = {}) {
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "content-length": Buffer.byteLength(payload),
-    "cache-control": "no-store",
+    "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0",
+    "cdn-cache-control": "no-store",
+    "cloudflare-cdn-cache-control": "no-store",
+    pragma: "no-cache",
+    expires: "0",
     "x-content-type-options": "nosniff",
     "referrer-policy": "same-origin",
     ...headers,
@@ -60,7 +64,11 @@ function json(res, status, body, headers = {}) {
 function text(res, status, body) {
   res.writeHead(status, {
     "content-type": "text/plain; charset=utf-8",
-    "cache-control": "no-store",
+    "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0",
+    "cdn-cache-control": "no-store",
+    "cloudflare-cdn-cache-control": "no-store",
+    pragma: "no-cache",
+    expires: "0",
     "x-content-type-options": "nosniff",
     "referrer-policy": "same-origin",
   });
@@ -622,9 +630,30 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (url.pathname === "/api/limits/refresh" && req.method === "POST") {
+    const accounts = (await loadAccounts()).filter((account) => account.userId === user.id);
+    const results = await Promise.all(accounts.map(refreshAccount));
+    json(res, 200, { results });
+    return;
+  }
+
   const limitMatch = url.pathname.match(/^\/api\/limits\/([^/]+)$/);
   if (limitMatch && req.method === "GET") {
     const id = decodeURIComponent(limitMatch[1]);
+    const account = (await loadAccounts()).find(
+      (item) => item.id === id && item.userId === user.id,
+    );
+    if (!account) {
+      json(res, 404, { error: "Account not found" });
+      return;
+    }
+    json(res, 200, await refreshAccount(account));
+    return;
+  }
+
+  const limitRefreshMatch = url.pathname.match(/^\/api\/limits\/([^/]+)\/refresh$/);
+  if (limitRefreshMatch && req.method === "POST") {
+    const id = decodeURIComponent(limitRefreshMatch[1]);
     const account = (await loadAccounts()).find(
       (item) => item.id === id && item.userId === user.id,
     );
@@ -658,7 +687,11 @@ async function serveStatic(req, res, url) {
     const ext = path.extname(filePath);
     res.writeHead(200, {
       "content-type": mimeTypes[ext] || "application/octet-stream",
-      "cache-control": ext === ".html" ? "no-store" : "public, max-age=300",
+      "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0",
+      "cdn-cache-control": "no-store",
+      "cloudflare-cdn-cache-control": "no-store",
+      pragma: "no-cache",
+      expires: "0",
       "x-content-type-options": "nosniff",
       "referrer-policy": "same-origin",
       "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",

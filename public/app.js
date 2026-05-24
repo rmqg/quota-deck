@@ -164,6 +164,7 @@ let currentUser = null;
 let allowRegistration = false;
 let accounts = [];
 let results = new Map();
+let requestNonce = 0;
 
 function t(key) {
   return translations[lang]?.[key] || translations.en[key] || key;
@@ -185,8 +186,14 @@ function applyI18n() {
 }
 
 async function api(path, options = {}) {
-  const response = await fetch(path, {
+  const method = (options.method || "GET").toUpperCase();
+  const requestPath =
+    method === "GET"
+      ? `${path}${path.includes("?") ? "&" : "?"}_qd=${Date.now()}-${requestNonce++}`
+      : path;
+  const response = await fetch(requestPath, {
     ...options,
+    cache: "no-store",
     credentials: "same-origin",
     headers: {
       "content-type": "application/json",
@@ -323,7 +330,7 @@ async function refreshAll() {
   refreshAllButton.disabled = true;
   refreshAllButton.textContent = t("refreshing");
   try {
-    const body = await api("/api/limits");
+    const body = await api("/api/limits/refresh", { method: "POST" });
     results = new Map(body.results.map((result) => [result.account.id, result]));
     render();
   } finally {
@@ -333,7 +340,7 @@ async function refreshAll() {
 }
 
 async function refreshOne(id) {
-  const body = await api(`/api/limits/${encodeURIComponent(id)}`);
+  const body = await api(`/api/limits/${encodeURIComponent(id)}/refresh`, { method: "POST" });
   results.set(body.account.id, body);
   render();
 }
