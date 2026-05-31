@@ -25,8 +25,6 @@ const translations = {
     pending: "等待刷新",
     refreshReturnedNoResults: "刷新没有返回账号结果",
     updatedIn: "更新耗时",
-    resetUnavailable: "无重置时间",
-    resets: "重置于",
     left: "剩余",
     used: "已用",
     limit: "额度",
@@ -34,6 +32,7 @@ const translations = {
     weekly: "每周额度",
     authRequired: "请先登录",
     importDone: "已导入账号",
+    deleteConfirm: "确定删除“{name}”吗？这不会影响 Codex / ChatGPT 本身。",
     beginnerGuideTitle: "小白使用说明",
     beginnerGuideBody: `
       <h3>这个页面能做什么</h3>
@@ -79,8 +78,6 @@ const translations = {
     pending: "等待重新整理",
     refreshReturnedNoResults: "重新整理未返回帳號結果",
     updatedIn: "更新耗時",
-    resetUnavailable: "無重置時間",
-    resets: "重置於",
     left: "剩餘",
     used: "已用",
     limit: "額度",
@@ -88,6 +85,7 @@ const translations = {
     weekly: "每週額度",
     authRequired: "請先登入",
     importDone: "已匯入帳號",
+    deleteConfirm: "確定刪除「{name}」嗎？這不會影響 Codex / ChatGPT 本身。",
     beginnerGuideTitle: "新手使用說明",
     beginnerGuideBody: `
       <h3>這個頁面能做什麼</h3>
@@ -133,8 +131,6 @@ const translations = {
     pending: "Pending refresh",
     refreshReturnedNoResults: "Refresh returned no account results",
     updatedIn: "updated in",
-    resetUnavailable: "reset time unavailable",
-    resets: "resets",
     left: "left",
     used: "used",
     limit: "Limit",
@@ -142,6 +138,7 @@ const translations = {
     weekly: "Weekly limit",
     authRequired: "Please login first",
     importDone: "Account imported",
+    deleteConfirm: "Delete \"{name}\"? This does not affect Codex / ChatGPT itself.",
     beginnerGuideTitle: "Beginner guide",
     beginnerGuideBody: `
       <h3>What this page does</h3>
@@ -187,8 +184,6 @@ const translations = {
     pending: "更新待ち",
     refreshReturnedNoResults: "更新結果にアカウントが含まれていません",
     updatedIn: "更新時間",
-    resetUnavailable: "リセット時刻なし",
-    resets: "リセット",
     left: "残り",
     used: "使用済み",
     limit: "制限",
@@ -196,6 +191,7 @@ const translations = {
     weekly: "週間制限",
     authRequired: "先にログインしてください",
     importDone: "アカウントをインポートしました",
+    deleteConfirm: "「{name}」を削除しますか？Codex / ChatGPT 自体には影響しません。",
     beginnerGuideTitle: "初心者向けガイド",
     beginnerGuideBody: `
       <h3>このページでできること</h3>
@@ -248,6 +244,10 @@ function t(key) {
   return translations[lang]?.[key] || translations.en[key] || key;
 }
 
+function interpolate(message, values) {
+  return message.replace(/\{(\w+)\}/g, (_, key) => values[key] ?? "");
+}
+
 function applyI18n() {
   document.documentElement.lang = lang;
   languageSelect.value = lang;
@@ -296,11 +296,6 @@ function formatTime(value) {
   }).format(new Date(value));
 }
 
-function formatReset(unixSeconds) {
-  if (!unixSeconds) return t("resetUnavailable");
-  return `${t("resets")} ${formatTime(new Date(unixSeconds * 1000))}`;
-}
-
 function limitLabel(window) {
   if (!window?.windowDurationMins) return t("limit");
   if (window.windowDurationMins === 300) return t("fiveHour");
@@ -315,15 +310,20 @@ function selectedSnapshot(result) {
   return result.rateLimitsByLimitId.codex || Object.values(result.rateLimitsByLimitId)[0] || result.rateLimits;
 }
 
+function remainingPercent(window) {
+  const used = Number(window?.usedPercent || 0);
+  if (!Number.isFinite(used) || used <= 1) return 100;
+  return Math.max(0, Math.min(100, Math.round(100 - used)));
+}
+
 function renderLimit(window) {
   const fragment = limitTemplate.content.cloneNode(true);
   const root = fragment.querySelector(".limit-line");
   const used = Number(window?.usedPercent || 0);
-  const left = Math.max(0, Math.min(100, 100 - used));
+  const left = remainingPercent(window);
   const fill = fragment.querySelector(".bar-fill");
   fragment.querySelector(".limit-name").textContent = limitLabel(window);
   fragment.querySelector(".limit-left").textContent = `${left}% ${t("left")}`;
-  fragment.querySelector(".reset-text").textContent = formatReset(window?.resetsAt);
   fill.style.width = `${left}%`;
   fill.classList.toggle("low", left <= 25 && left > 5);
   fill.classList.toggle("empty", left <= 5);
@@ -501,6 +501,10 @@ async function refreshOne(id) {
 }
 
 async function deleteAccount(id) {
+  const account = accounts.find((item) => item.id === id);
+  if (!account) return;
+  if (!window.confirm(interpolate(t("deleteConfirm"), { name: account.name }))) return;
+
   const previousAccounts = accounts;
   const previousResults = results;
   accounts = accounts.filter((account) => account.id !== id);

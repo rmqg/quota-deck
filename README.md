@@ -167,7 +167,7 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 账号卡片按钮：
 
 - `↻`：只刷新这个账号。
-- `×`：删除这个账号配置，不会影响 Codex / ChatGPT 本身。
+- `×`：删除这个账号配置。删除前会二次确认，不会影响 Codex / ChatGPT 本身。
 
 状态数字：
 
@@ -179,6 +179,8 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 
 - `5 小时额度`：Codex CLI TUI 里的 `5h limit`。
 - `每周额度`：Codex CLI TUI 里的 `Weekly limit`。
+- 页面只显示剩余百分比，不显示 Codex 返回的滚动窗口重置时间；5 小时窗口在未明显使用时可能返回类似“当前查询时间 + 5 小时”的时间，容易误解。
+- 当 Codex 返回的已用百分比小于等于 `1%` 时，页面按原生 TUI 的观感显示为 `100%` 剩余。
 
 ## 更新、备份和恢复
 

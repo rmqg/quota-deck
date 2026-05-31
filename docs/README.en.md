@@ -167,7 +167,7 @@ Top buttons:
 Account card buttons:
 
 - `↻`: refresh only this account.
-- `×`: delete this account configuration. This does not affect Codex / ChatGPT itself.
+- `×`: delete this account configuration. QuotaDeck asks for confirmation first. This does not affect Codex / ChatGPT itself.
 
 Status numbers:
 
@@ -179,6 +179,8 @@ Limit bars:
 
 - `5h limit`: the `5h limit` shown in the Codex CLI TUI.
 - `Weekly limit`: the `Weekly limit` shown in the Codex CLI TUI.
+- The page shows remaining percentage only. It does not show rolling-window reset timestamps returned by Codex, because an unused 5-hour window can look like "query time + 5 hours" and be misleading.
+- When Codex returns `1%` used or less, the page displays `100%` remaining to match the native TUI behavior.
 
 ## Updates, Backups, And Restore
 

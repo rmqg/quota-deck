@@ -167,7 +167,7 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 帳號卡片按鈕：
 
 - `↻`：只重新整理這個帳號。
-- `×`：刪除這個帳號設定，不會影響 Codex / ChatGPT 本身。
+- `×`：刪除這個帳號設定。刪除前會二次確認，不會影響 Codex / ChatGPT 本身。
 
 狀態數字：
 
@@ -179,6 +179,8 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 
 - `5 小時額度`：Codex CLI TUI 裡的 `5h limit`。
 - `每週額度`：Codex CLI TUI 裡的 `Weekly limit`。
+- 頁面只顯示剩餘百分比，不顯示 Codex 返回的滾動視窗重置時間；5 小時視窗在未明顯使用時可能返回類似「目前查詢時間 + 5 小時」的時間，容易誤解。
+- 當 Codex 返回的已用百分比小於等於 `1%` 時，頁面會依照原生 TUI 的觀感顯示為 `100%` 剩餘。
 
 ## 更新、備份和恢復
 

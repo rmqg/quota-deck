@@ -518,7 +518,6 @@ input:focus {
   background: var(--danger);
 }
 
-.reset-text,
 .row-message {
   margin: 8px 0 0;
   color: var(--muted);
@@ -718,15 +717,8 @@ input:focus {
     height: 10px;
   }
 
-  .reset-text,
   .row-message {
     margin-top: 4px;
     font-size: 11px;
-  }
-
-  .reset-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 }
