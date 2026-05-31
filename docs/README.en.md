@@ -179,8 +179,8 @@ Limit bars:
 
 - `5h limit`: the `5h limit` shown in the Codex CLI TUI.
 - `Weekly limit`: the `Weekly limit` shown in the Codex CLI TUI.
-- The page shows remaining percentage only. It does not show rolling-window reset timestamps returned by Codex, because an unused 5-hour window can look like "query time + 5 hours" and be misleading.
-- When Codex returns `1%` used or less, the page displays `100%` remaining to match the native TUI behavior.
+- When a limit shows `100%` remaining, the page hides the rolling-window reset timestamp returned by Codex. Below `100%`, it shows the reset time.
+- Only the `5h limit` displays `1%` used or less as `100%` remaining to match the native TUI behavior. `Weekly limit` displays Codex's returned value.
 
 ## Updates, Backups, And Restore
 

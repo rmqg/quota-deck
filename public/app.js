@@ -25,6 +25,8 @@ const translations = {
     pending: "等待刷新",
     refreshReturnedNoResults: "刷新没有返回账号结果",
     updatedIn: "更新耗时",
+    resetUnavailable: "无重置时间",
+    resets: "重置于",
     left: "剩余",
     used: "已用",
     limit: "额度",
@@ -78,6 +80,8 @@ const translations = {
     pending: "等待重新整理",
     refreshReturnedNoResults: "重新整理未返回帳號結果",
     updatedIn: "更新耗時",
+    resetUnavailable: "無重置時間",
+    resets: "重置於",
     left: "剩餘",
     used: "已用",
     limit: "額度",
@@ -131,6 +135,8 @@ const translations = {
     pending: "Pending refresh",
     refreshReturnedNoResults: "Refresh returned no account results",
     updatedIn: "updated in",
+    resetUnavailable: "reset time unavailable",
+    resets: "resets",
     left: "left",
     used: "used",
     limit: "Limit",
@@ -184,6 +190,8 @@ const translations = {
     pending: "更新待ち",
     refreshReturnedNoResults: "更新結果にアカウントが含まれていません",
     updatedIn: "更新時間",
+    resetUnavailable: "リセット時刻なし",
+    resets: "リセット",
     left: "残り",
     used: "使用済み",
     limit: "制限",
@@ -296,6 +304,11 @@ function formatTime(value) {
   }).format(new Date(value));
 }
 
+function formatReset(unixSeconds) {
+  if (!unixSeconds) return t("resetUnavailable");
+  return `${t("resets")} ${formatTime(new Date(unixSeconds * 1000))}`;
+}
+
 function limitLabel(window) {
   if (!window?.windowDurationMins) return t("limit");
   if (window.windowDurationMins === 300) return t("fiveHour");
@@ -312,7 +325,8 @@ function selectedSnapshot(result) {
 
 function remainingPercent(window) {
   const used = Number(window?.usedPercent || 0);
-  if (!Number.isFinite(used) || used <= 1) return 100;
+  if (!Number.isFinite(used)) return 100;
+  if (window?.windowDurationMins === 300 && used <= 1) return 100;
   return Math.max(0, Math.min(100, Math.round(100 - used)));
 }
 
@@ -322,8 +336,11 @@ function renderLimit(window) {
   const used = Number(window?.usedPercent || 0);
   const left = remainingPercent(window);
   const fill = fragment.querySelector(".bar-fill");
+  const resetText = fragment.querySelector(".reset-text");
   fragment.querySelector(".limit-name").textContent = limitLabel(window);
   fragment.querySelector(".limit-left").textContent = `${left}% ${t("left")}`;
+  resetText.hidden = left >= 100;
+  resetText.textContent = left < 100 ? formatReset(window?.resetsAt) : "";
   fill.style.width = `${left}%`;
   fill.classList.toggle("low", left <= 25 && left > 5);
   fill.classList.toggle("empty", left <= 5);
