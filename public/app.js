@@ -227,6 +227,7 @@ const importForm = document.querySelector("#importForm");
 const authPanel = document.querySelector("#authPanel");
 const appPanel = document.querySelector("#appPanel");
 const authMessage = document.querySelector("#authMessage");
+const beginnerGuide = document.querySelector(".beginner-guide");
 const languageSelect = document.querySelector("#languageSelect");
 const refreshAllButton = document.querySelector("#refreshAll");
 const logoutButton = document.querySelector("#logoutButton");
@@ -353,6 +354,7 @@ function setAuthedState() {
     node.hidden = !currentUser;
   });
   authPanel.hidden = Boolean(currentUser);
+  beginnerGuide.hidden = Boolean(currentUser);
 }
 
 function findAccountRow(id) {

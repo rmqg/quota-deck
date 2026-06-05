@@ -159,6 +159,8 @@ Do not send `auth.json` to public chats, issues, forums, or servers you do not t
 
 ## How To Use The Page
 
+The page uses a compact layout on desktop and mobile so more accounts and limit bars fit on screen.
+
 Top buttons:
 
 - "Refresh": refresh all accounts for the current user.
