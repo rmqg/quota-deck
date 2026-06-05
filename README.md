@@ -153,7 +153,7 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 3. 在“账号名称”里填一个容易识别的名字，比如 `OpenAI Business`。
 4. 选择本机的 `auth.json`。
 5. 点击“导入”。
-6. 导入后点击刷新。
+6. 导入后页面会在账号名称下方显示 `auth.json` 里解析出的邮箱（如果存在），再点击刷新。
 
 不要把 `auth.json` 发到公开聊天、Issue、论坛，或上传到不信任的服务器。
 
@@ -166,6 +166,7 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 
 账号卡片按钮：
 
+- 账号名称下方会显示从 `auth.json` 解析出的邮箱（如果存在），方便区分多个账号。
 - `↻`：只刷新这个账号。
 - `×`：删除这个账号配置。删除前会二次确认，不会影响 Codex / ChatGPT 本身。
 

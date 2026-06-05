@@ -359,6 +359,12 @@ function findAccountRow(id) {
   return [...accountList.querySelectorAll(".account-row")].find((row) => row.dataset.accountId === id);
 }
 
+function accountDisplayLabel(account) {
+  const email = String(account?.email || "").trim();
+  const name = String(account?.name || email || "Codex Account").trim();
+  return email && email.toLowerCase() !== name.toLowerCase() ? `${name} (${email})` : name;
+}
+
 function renderPreservingAccount(id) {
   const previousRow = findAccountRow(id);
   const previousTop = previousRow?.getBoundingClientRect().top;
@@ -407,6 +413,11 @@ function render() {
     root.dataset.accountId = account.id;
     root.classList.toggle("is-refreshing", isRefreshing);
     fragment.querySelector(".account-name").textContent = account.name;
+    const emailNode = fragment.querySelector(".account-email");
+    const email = String(account.email || "").trim();
+    const showEmail = Boolean(email && email.toLowerCase() !== String(account.name || "").trim().toLowerCase());
+    emailNode.textContent = showEmail ? email : "";
+    emailNode.hidden = !showEmail;
     fragment.querySelector(".account-path").textContent = account.provider;
     fragment.querySelector(".plan-badge").textContent = snapshot?.planType || account.provider;
     refreshButton.disabled = isRefreshing;
@@ -520,7 +531,7 @@ async function refreshOne(id) {
 async function deleteAccount(id) {
   const account = accounts.find((item) => item.id === id);
   if (!account) return;
-  if (!window.confirm(interpolate(t("deleteConfirm"), { name: account.name }))) return;
+  if (!window.confirm(interpolate(t("deleteConfirm"), { name: accountDisplayLabel(account) }))) return;
 
   const previousAccounts = accounts;
   const previousResults = results;

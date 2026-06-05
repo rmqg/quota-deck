@@ -153,7 +153,7 @@ Import steps:
 3. Enter a recognizable name in "Account Name", for example `OpenAI Business`.
 4. Select the local `auth.json`.
 5. Click "Import".
-6. Refresh after import.
+6. After import, the page shows the email parsed from `auth.json` under the account name when available, then you can refresh.
 
 Do not send `auth.json` to public chats, issues, forums, or servers you do not trust.
 
@@ -166,6 +166,7 @@ Top buttons:
 
 Account card buttons:
 
+- The email parsed from `auth.json` is shown under the account name when available, making multiple accounts easier to tell apart.
 - `↻`: refresh only this account.
 - `×`: delete this account configuration. QuotaDeck asks for confirmation first. This does not affect Codex / ChatGPT itself.
 

@@ -153,7 +153,7 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 3. 在「帳號名稱」裡填一個容易識別的名稱，例如 `OpenAI Business`。
 4. 選擇本機的 `auth.json`。
 5. 點擊「匯入」。
-6. 匯入後點擊重新整理。
+6. 匯入後頁面會在帳號名稱下方顯示從 `auth.json` 解析出的信箱（如果存在），再點擊重新整理。
 
 不要把 `auth.json` 發到公開聊天、Issue、論壇，或上傳到不信任的伺服器。
 
@@ -166,6 +166,7 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 
 帳號卡片按鈕：
 
+- 帳號名稱下方會顯示從 `auth.json` 解析出的信箱（如果存在），方便區分多個帳號。
 - `↻`：只重新整理這個帳號。
 - `×`：刪除這個帳號設定。刪除前會二次確認，不會影響 Codex / ChatGPT 本身。
 

@@ -3,6 +3,7 @@
     "id": "example",
     "provider": "codex",
     "name": "OpenAI Business",
+    "email": "user@example.com",
     "userId": "user-id",
     "identity": "user@example.com",
     "encryptedAuth": "v1.iv.tag.ciphertext",

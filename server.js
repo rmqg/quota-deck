@@ -244,6 +244,7 @@ function publicAccount(account) {
     id: account.id,
     provider: account.provider,
     name: account.name,
+    email: normalizeEmail(account.email) || normalizeEmail(account.identity),
     createdAt: account.createdAt,
   };
 }
@@ -381,14 +382,25 @@ function decodeJwtPayload(token) {
   }
 }
 
+function normalizeEmail(value) {
+  const email = String(value || "").trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+}
+
 function identityFromAuth(auth) {
   const payload = decodeJwtPayload(auth.tokens.id_token);
-  return payload.email || payload.name || auth.tokens.account_id || null;
+  return normalizeEmail(payload.email) || payload.name || auth.tokens.account_id || null;
+}
+
+function emailFromAuth(auth) {
+  const payload = decodeJwtPayload(auth.tokens.id_token);
+  return normalizeEmail(payload.email);
 }
 
 async function createAccountFromAuth(user, input) {
   const auth = validateAuthJson(input.authJson);
   const identity = identityFromAuth(auth);
+  const email = emailFromAuth(auth);
   const name = String(input.name || identity || "Codex Account").trim();
   if (!name) {
     throw new Error("Account name is required");
@@ -399,6 +411,7 @@ async function createAccountFromAuth(user, input) {
     userId: user.id,
     provider: "codex",
     name,
+    email,
     identity,
     encryptedAuth: encryptJson(auth),
     createdAt: new Date().toISOString(),
