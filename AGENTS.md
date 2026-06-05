@@ -97,6 +97,8 @@ docker compose config
 
 ## 服务器部署注意事项
 
+- 服务器 SSH Host 别名：`germany`。
+- 默认部署目录：`/srv/quota-deck`。
 - 不要在不知道服务器状态时执行破坏性命令。
 - 不要删除服务器上的 `.env`、`data/`、`caddy-data/`、`caddy-config/`。
 - 如果部署失败，先保留现场并收集：
