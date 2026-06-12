@@ -36,6 +36,15 @@ const appSecret = process.env.APP_SECRET || "dev-secret-change-me";
 const allowRegistration = process.env.ALLOW_REGISTRATION === "1";
 const rateBuckets = new Map();
 
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of rateBuckets) {
+    if (bucket.resetAt <= now) {
+      rateBuckets.delete(key);
+    }
+  }
+}, 60_000).unref();
+
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -465,10 +474,15 @@ function requestCodexRateLimits(codexHome) {
     }
 
     function send(message) {
-      child.stdin.write(`${JSON.stringify(message)}\n`);
+      try {
+        child.stdin.write(`${JSON.stringify(message)}\n`);
+      } catch (error) {
+        finish(error);
+      }
     }
 
     child.on("error", (error) => finish(error));
+    child.stdin.on("error", (error) => finish(error));
     child.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       if (stderr.length > 4000) {

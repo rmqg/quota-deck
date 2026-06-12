@@ -582,32 +582,42 @@ registerForm.addEventListener("submit", async (event) => {
 
 importForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const formData = new FormData(importForm);
-  const file = formData.get("authFile");
-  if (!(file instanceof File)) return;
-  const payload = {
-    name: formData.get("name"),
-    authJson: await file.text(),
-  };
-  const body = await api("/api/accounts/import-auth", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-  accounts.push(body.account);
-  importForm.reset();
-  render();
-  await refreshOne(body.account.id);
+  try {
+    const formData = new FormData(importForm);
+    const file = formData.get("authFile");
+    if (!(file instanceof File)) return;
+    const payload = {
+      name: formData.get("name"),
+      authJson: await file.text(),
+    };
+    const body = await api("/api/accounts/import-auth", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    accounts.push(body.account);
+    importForm.reset();
+    render();
+    await refreshOne(body.account.id);
+  } catch (error) {
+    window.alert(error.message);
+  }
 });
 
 logoutButton.addEventListener("click", async () => {
-  await api("/api/auth/logout", { method: "POST" });
+  try {
+    await api("/api/auth/logout", { method: "POST" });
+  } catch (error) {
+    console.error(error);
+  }
   currentUser = null;
   accounts = [];
   results = new Map();
   render();
 });
 
-refreshAllButton.addEventListener("click", refreshAll);
+refreshAllButton.addEventListener("click", () => {
+  refreshAll().catch(console.error);
+});
 languageSelect.addEventListener("change", () => {
   lang = languageSelect.value;
   localStorage.setItem("quotaDeckLang", lang);
@@ -615,9 +625,14 @@ languageSelect.addEventListener("change", () => {
 });
 
 applyI18n();
-await loadMe();
-await loadAccounts();
-await refreshAll();
+try {
+  await loadMe();
+  await loadAccounts();
+  await refreshAll();
+} catch (error) {
+  console.error(error);
+  authMessage.textContent = error.message;
+}
 window.setInterval(() => {
   refreshAll().catch(console.error);
 }, refreshIntervalMs);
