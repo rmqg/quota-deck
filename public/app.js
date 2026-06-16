@@ -587,13 +587,13 @@ function applyRefreshResults(body) {
   results = next;
 }
 
-function refreshAll() {
+function refreshAll(force = false) {
   if (!currentUser) return Promise.resolve();
   if (refreshAllInFlight) return refreshAllInFlight;
   refreshAllButton.disabled = true;
   refreshAllButton.textContent = t("refreshing");
   refreshAllInFlight = (async () => {
-    const body = await api("/api/limits/refresh", { method: "POST" });
+    const body = await api(`/api/limits/refresh${force ? "?force=1" : ""}`, { method: "POST" });
     applyRefreshResults(body);
     render();
   })();
@@ -611,7 +611,7 @@ async function refreshOne(id) {
   renderPreservingAccount(id);
 
   try {
-    const body = await api(`/api/limits/${encodeURIComponent(id)}/refresh`, { method: "POST" });
+    const body = await api(`/api/limits/${encodeURIComponent(id)}/refresh?force=1`, { method: "POST" });
     results.set(body.account.id, body);
   } catch (error) {
     const account = accounts.find((item) => item.id === id);
@@ -660,7 +660,7 @@ async function submitAuthForm(form, endpoint) {
   form.reset();
   await loadAccounts();
   await loadBark();
-  await refreshAll();
+  await refreshAll(true);
 }
 
 loginForm.addEventListener("submit", async (event) => {
@@ -796,7 +796,7 @@ logoutButton.addEventListener("click", async () => {
 });
 
 refreshAllButton.addEventListener("click", () => {
-  refreshAll().catch(console.error);
+  refreshAll(true).catch(console.error);
 });
 languageSelect.addEventListener("change", () => {
   lang = languageSelect.value;
@@ -809,7 +809,7 @@ try {
   await loadMe();
   await loadAccounts();
   await loadBark();
-  await refreshAll();
+  await refreshAll(true);
 } catch (error) {
   console.error(error);
   authMessage.textContent = error.message;
