@@ -606,6 +606,13 @@ function applyRefreshResults(body) {
   results = next;
 }
 
+async function loadLimits() {
+  if (!currentUser) return;
+  const body = await api("/api/limits");
+  applyRefreshResults(body);
+  render();
+}
+
 function refreshAll() {
   if (!currentUser) return Promise.resolve();
   if (refreshAllInFlight) return refreshAllInFlight;
@@ -679,7 +686,7 @@ async function submitAuthForm(form, endpoint) {
   form.reset();
   await loadAccounts();
   await loadBark();
-  await refreshAll();
+  await loadLimits();
 }
 
 loginForm.addEventListener("submit", async (event) => {
@@ -828,11 +835,11 @@ try {
   await loadMe();
   await loadAccounts();
   await loadBark();
-  await refreshAll();
+  await loadLimits();
 } catch (error) {
   console.error(error);
   authMessage.textContent = error.message;
 }
 window.setInterval(() => {
-  refreshAll().catch(console.error);
+  loadLimits().catch(console.error);
 }, refreshIntervalMs);

@@ -40,7 +40,7 @@ const claudeClientId = process.env.CLAUDE_OAUTH_CLIENT_ID || "9d1c250a-e61b-44d9
 const claudeUserAgent = process.env.CLAUDE_USER_AGENT || "claude-code/2.0.0";
 const claudeBeta = process.env.CLAUDE_OAUTH_BETA || "oauth-2025-04-20";
 const httpTimeoutMs = Number(process.env.HTTP_TIMEOUT_MS || 15000);
-const barkMonitorIntervalMs = Number(process.env.BARK_MONITOR_INTERVAL_MS || 5 * 60 * 1000);
+const backgroundRefreshEnabled = process.env.BACKGROUND_REFRESH !== "0";
 const barkDefaultServer = process.env.BARK_DEFAULT_SERVER || "https://api.day.app";
 const rateBuckets = new Map();
 
@@ -922,31 +922,38 @@ async function evaluateBark(user, account, result) {
   }
 }
 
-let barkMonitorRunning = false;
+// Latest usage snapshot per account, kept fresh by the background refresh so
+// browsers can display the most recent data without each one hitting upstream.
+const latestResults = new Map();
 
-async function runBarkMonitor() {
-  if (barkMonitorRunning) {
+async function refreshAndStore(account) {
+  const result = await refreshAccount(account);
+  latestResults.set(account.id, result);
+  return result;
+}
+
+let backgroundRefreshRunning = false;
+
+async function runBackgroundRefresh() {
+  if (backgroundRefreshRunning) {
     return;
   }
-  barkMonitorRunning = true;
+  backgroundRefreshRunning = true;
   try {
-    const users = await loadUsers();
-    const active = users.filter((user) => user.bark?.enabled && user.bark?.deviceKey);
-    if (!active.length) {
-      return;
-    }
     const accounts = await loadAccounts();
-    for (const user of active) {
-      const userAccounts = accounts.filter((account) => account.userId === user.id);
-      for (const account of userAccounts) {
-        const result = await refreshAccount(account);
+    const users = await loadUsers();
+    const usersById = new Map(users.map((user) => [user.id, user]));
+    for (const account of accounts) {
+      const result = await refreshAndStore(account);
+      const user = usersById.get(account.userId);
+      if (user?.bark?.enabled && user.bark?.deviceKey) {
         await evaluateBark(user, account, result);
       }
     }
   } catch (error) {
-    console.error("Bark monitor error:", error.message);
+    console.error("Background refresh error:", error.message);
   } finally {
-    barkMonitorRunning = false;
+    backgroundRefreshRunning = false;
   }
 }
 
@@ -1079,6 +1086,7 @@ async function handleApi(req, res, url) {
       (item) => !(item.id === id && item.userId === user.id),
     );
     await saveAccounts(remainingAccounts);
+    latestResults.delete(id);
     json(res, 200, {
       ok: true,
       deletedId: id,
@@ -1088,15 +1096,21 @@ async function handleApi(req, res, url) {
   }
 
   if (url.pathname === "/api/limits" && req.method === "GET") {
+    // Serve the background snapshot; lazily fetch any account not yet cached
+    // (e.g. just imported, or right after a cold start).
     const accounts = (await loadAccounts()).filter((account) => account.userId === user.id);
-    const results = await Promise.all(accounts.map(refreshAccount));
+    const missing = accounts.filter((account) => !latestResults.has(account.id));
+    if (missing.length) {
+      await Promise.all(missing.map(refreshAndStore));
+    }
+    const results = accounts.map((account) => latestResults.get(account.id)).filter(Boolean);
     json(res, 200, { results });
     return;
   }
 
   if (url.pathname === "/api/limits/refresh" && req.method === "POST") {
     const accounts = (await loadAccounts()).filter((account) => account.userId === user.id);
-    const results = await Promise.all(accounts.map(refreshAccount));
+    const results = await Promise.all(accounts.map(refreshAndStore));
     json(res, 200, { results });
     return;
   }
@@ -1111,7 +1125,7 @@ async function handleApi(req, res, url) {
       json(res, 404, { error: "Account not found" });
       return;
     }
-    json(res, 200, await refreshAccount(account));
+    json(res, 200, await refreshAndStore(account));
     return;
   }
 
@@ -1125,7 +1139,7 @@ async function handleApi(req, res, url) {
       json(res, 404, { error: "Account not found" });
       return;
     }
-    json(res, 200, await refreshAccount(account));
+    json(res, 200, await refreshAndStore(account));
     return;
   }
 
@@ -1187,8 +1201,17 @@ server.listen(port, () => {
   console.log(`QuotaDeck listening on http://127.0.0.1:${port} (${secretState})`);
 });
 
-if (barkMonitorIntervalMs > 0) {
-  setInterval(() => {
-    runBarkMonitor().catch((error) => console.error("Bark monitor error:", error.message));
-  }, barkMonitorIntervalMs).unref();
+if (backgroundRefreshEnabled) {
+  // Refresh on the minute boundary (:00) so the snapshot and reset countdowns
+  // tick predictably, then re-arm for the next minute (self-correcting drift).
+  const scheduleMinuteRefresh = () => {
+    const delay = 60_000 - (Date.now() % 60_000);
+    setTimeout(() => {
+      runBackgroundRefresh().catch((error) => console.error("Background refresh error:", error.message));
+      scheduleMinuteRefresh();
+    }, delay).unref();
+  };
+  // Populate the snapshot once at startup so the first view is not empty.
+  runBackgroundRefresh().catch((error) => console.error("Background refresh error:", error.message));
+  scheduleMinuteRefresh();
 }
