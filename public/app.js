@@ -1,6 +1,6 @@
 const translations = {
   "zh-Hans": {
-    title: "Codex 额度监控",
+    title: "额度监控",
     refresh: "刷新",
     logout: "退出",
     loginTitle: "登录",
@@ -13,6 +13,26 @@ const translations = {
     accountNamePlaceholder: "OpenAI Business",
     authJson: "Codex auth.json",
     import: "导入",
+    provider: "平台",
+    providerCodex: "Codex / ChatGPT",
+    providerClaude: "Claude",
+    claudeCredentials: "Claude credentials.json",
+    guideClaude: "Claude 账号请上传 Claude Code 登录文件：<code>~/.claude/.credentials.json</code>",
+    barkTitle: "Bark 推送通知",
+    barkEnabled: "启用 Bark 推送",
+    barkServerUrl: "Bark 服务器地址",
+    barkDeviceKey: "Bark 设备 Key",
+    barkThreshold: "低额度阈值（%）",
+    barkEvents: "通知时机",
+    barkEventLow: "额度即将耗尽",
+    barkEventExhausted: "额度已耗尽",
+    barkEventReset: "额度已恢复",
+    barkEventError: "刷新失败",
+    barkSave: "保存",
+    barkTest: "发送测试",
+    barkSaved: "已保存 Bark 设置",
+    barkTestSent: "测试通知已发送",
+    barkTestFailed: "发送失败：",
     guideTitle: "如何获取 auth.json",
     guideOne: "在本机找到 Codex 登录文件：<code>${CODEX_HOME:-$HOME/.codex}/auth.json</code>",
     guideTwo: "在这里上传该文件。服务器只保存加密后的凭据，刷新额度时才临时解密。",
@@ -38,7 +58,7 @@ const translations = {
     beginnerGuideTitle: "小白使用说明",
     beginnerGuideBody: `
       <h3>这个页面能做什么</h3>
-      <p>QuotaDeck 用来查看 Codex CLI 里显示的两个额度：5 小时额度和每周额度。它不会查看 OpenAI API 账单，也不覆盖 Claude Pro。</p>
+      <p>QuotaDeck 用来集中查看 Codex 和 Claude 的额度：5 小时额度和每周额度。它不查看 OpenAI API 账单；Claude 订阅额度可通过上传 Claude Code 登录文件查看。</p>
       <h3>第一次使用</h3>
       <ol>
         <li>先注册一个本站账号。公开部署时，创建好自己的账号后，应在服务器里把 <code>ALLOW_REGISTRATION</code> 改成 <code>0</code> 并重启容器，避免陌生人注册。</li>
@@ -55,7 +75,7 @@ const translations = {
     `,
   },
   "zh-Hant": {
-    title: "Codex 額度監控",
+    title: "額度監控",
     refresh: "重新整理",
     logout: "登出",
     loginTitle: "登入",
@@ -68,6 +88,26 @@ const translations = {
     accountNamePlaceholder: "OpenAI Business",
     authJson: "Codex auth.json",
     import: "匯入",
+    provider: "平台",
+    providerCodex: "Codex / ChatGPT",
+    providerClaude: "Claude",
+    claudeCredentials: "Claude credentials.json",
+    guideClaude: "Claude 帳號請上傳 Claude Code 登入檔：<code>~/.claude/.credentials.json</code>",
+    barkTitle: "Bark 推播通知",
+    barkEnabled: "啟用 Bark 推播",
+    barkServerUrl: "Bark 伺服器位址",
+    barkDeviceKey: "Bark 裝置 Key",
+    barkThreshold: "低額度閾值（%）",
+    barkEvents: "通知時機",
+    barkEventLow: "額度即將耗盡",
+    barkEventExhausted: "額度已耗盡",
+    barkEventReset: "額度已恢復",
+    barkEventError: "重新整理失敗",
+    barkSave: "儲存",
+    barkTest: "傳送測試",
+    barkSaved: "已儲存 Bark 設定",
+    barkTestSent: "測試通知已傳送",
+    barkTestFailed: "傳送失敗：",
     guideTitle: "如何取得 auth.json",
     guideOne: "在本機找到 Codex 登入檔：<code>${CODEX_HOME:-$HOME/.codex}/auth.json</code>",
     guideTwo: "在這裡上傳該檔案。伺服器只保存加密後的憑據，刷新額度時才暫時解密。",
@@ -93,7 +133,7 @@ const translations = {
     beginnerGuideTitle: "新手使用說明",
     beginnerGuideBody: `
       <h3>這個頁面能做什麼</h3>
-      <p>QuotaDeck 用來查看 Codex CLI 裡顯示的兩個額度：5 小時額度和每週額度。它不會查看 OpenAI API 帳單，也不涵蓋 Claude Pro。</p>
+      <p>QuotaDeck 用來集中查看 Codex 和 Claude 的額度：5 小時額度和每週額度。它不會查看 OpenAI API 帳單；Claude 訂閱額度可透過上傳 Claude Code 登入檔查看。</p>
       <h3>第一次使用</h3>
       <ol>
         <li>先註冊一個本站帳號。公開部署時，建立好自己的帳號後，應在伺服器把 <code>ALLOW_REGISTRATION</code> 改成 <code>0</code> 並重啟容器，避免陌生人註冊。</li>
@@ -110,7 +150,7 @@ const translations = {
     `,
   },
   en: {
-    title: "Codex Limit Monitor",
+    title: "Quota Monitor",
     refresh: "Refresh",
     logout: "Logout",
     loginTitle: "Login",
@@ -123,6 +163,26 @@ const translations = {
     accountNamePlaceholder: "OpenAI Business",
     authJson: "Codex auth.json",
     import: "Import",
+    provider: "Provider",
+    providerCodex: "Codex / ChatGPT",
+    providerClaude: "Claude",
+    claudeCredentials: "Claude credentials.json",
+    guideClaude: "For Claude, upload the Claude Code login file: <code>~/.claude/.credentials.json</code>",
+    barkTitle: "Bark notifications",
+    barkEnabled: "Enable Bark notifications",
+    barkServerUrl: "Bark server URL",
+    barkDeviceKey: "Bark device key",
+    barkThreshold: "Low-quota threshold (%)",
+    barkEvents: "Notify on",
+    barkEventLow: "Low quota",
+    barkEventExhausted: "Quota exhausted",
+    barkEventReset: "Quota reset",
+    barkEventError: "Refresh failure",
+    barkSave: "Save",
+    barkTest: "Send test",
+    barkSaved: "Bark settings saved",
+    barkTestSent: "Test notification sent",
+    barkTestFailed: "Send failed: ",
     guideTitle: "How to get auth.json",
     guideOne: "Find your local Codex login file: <code>${CODEX_HOME:-$HOME/.codex}/auth.json</code>",
     guideTwo: "Upload it here. Credentials are encrypted at rest and only decrypted temporarily while refreshing limits.",
@@ -148,7 +208,7 @@ const translations = {
     beginnerGuideTitle: "Beginner guide",
     beginnerGuideBody: `
       <h3>What this page does</h3>
-      <p>QuotaDeck shows the two limits that Codex CLI displays: the 5-hour limit and the weekly limit. It does not monitor OpenAI API billing, and it does not cover Claude Pro.</p>
+      <p>QuotaDeck shows the 5-hour and weekly limits for both Codex and Claude in one place. It does not monitor OpenAI API billing; Claude subscription limits are available by uploading the Claude Code login file.</p>
       <h3>First-time setup</h3>
       <ol>
         <li>Create a local QuotaDeck account. For public deployments, create your own account first, then set <code>ALLOW_REGISTRATION</code> to <code>0</code> on the server and restart the container.</li>
@@ -165,7 +225,7 @@ const translations = {
     `,
   },
   ja: {
-    title: "Codex 制限モニター",
+    title: "使用量モニター",
     refresh: "更新",
     logout: "ログアウト",
     loginTitle: "ログイン",
@@ -178,6 +238,26 @@ const translations = {
     accountNamePlaceholder: "OpenAI Business",
     authJson: "Codex auth.json",
     import: "インポート",
+    provider: "プロバイダー",
+    providerCodex: "Codex / ChatGPT",
+    providerClaude: "Claude",
+    claudeCredentials: "Claude credentials.json",
+    guideClaude: "Claude の場合は Claude Code のログインファイルをアップロード：<code>~/.claude/.credentials.json</code>",
+    barkTitle: "Bark 通知",
+    barkEnabled: "Bark 通知を有効化",
+    barkServerUrl: "Bark サーバー URL",
+    barkDeviceKey: "Bark デバイスキー",
+    barkThreshold: "残量しきい値（%）",
+    barkEvents: "通知タイミング",
+    barkEventLow: "残量わずか",
+    barkEventExhausted: "残量ゼロ",
+    barkEventReset: "残量回復",
+    barkEventError: "更新失敗",
+    barkSave: "保存",
+    barkTest: "テスト送信",
+    barkSaved: "Bark 設定を保存しました",
+    barkTestSent: "テスト通知を送信しました",
+    barkTestFailed: "送信失敗：",
     guideTitle: "auth.json の取得方法",
     guideOne: "ローカルの Codex ログインファイルを探します: <code>${CODEX_HOME:-$HOME/.codex}/auth.json</code>",
     guideTwo: "ここにアップロードします。認証情報は保存時に暗号化され、制限更新時だけ一時的に復号されます。",
@@ -203,7 +283,7 @@ const translations = {
     beginnerGuideTitle: "初心者向けガイド",
     beginnerGuideBody: `
       <h3>このページでできること</h3>
-      <p>QuotaDeck は Codex CLI に表示される 2 つの制限、5 時間制限と週間制限を表示します。OpenAI API の請求利用量や Claude Pro は対象外です。</p>
+      <p>QuotaDeck は Codex と Claude の 5 時間制限と週間制限をまとめて表示します。OpenAI API の請求利用量は対象外ですが、Claude のサブスク残量は Claude Code のログインファイルをアップロードすると確認できます。</p>
       <h3>初回利用</h3>
       <ol>
         <li>まず QuotaDeck のローカルアカウントを作成します。公開運用では、自分のアカウントを作成した後、サーバー側で <code>ALLOW_REGISTRATION</code> を <code>0</code> に変更してコンテナを再起動してください。</li>
@@ -237,6 +317,11 @@ const limitTemplate = document.querySelector("#limitTemplate");
 const accountCount = document.querySelector("#accountCount");
 const healthyCount = document.querySelector("#healthyCount");
 const updatedAt = document.querySelector("#updatedAt");
+const providerSelect = document.querySelector("#providerSelect");
+const credentialLabel = document.querySelector("#credentialLabel");
+const barkForm = document.querySelector("#barkForm");
+const barkTestButton = document.querySelector("#barkTest");
+const barkMessage = document.querySelector("#barkMessage");
 const refreshIntervalMs = 30_000;
 
 let lang = localStorage.getItem("quotaDeckLang") || navigator.language || "en";
@@ -269,7 +354,14 @@ function applyI18n() {
   document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
     node.placeholder = t(node.dataset.i18nPlaceholder);
   });
+  updateCredentialLabel();
   render();
+}
+
+function updateCredentialLabel() {
+  if (!credentialLabel || !providerSelect) return;
+  credentialLabel.textContent =
+    providerSelect.value === "claude" ? t("claudeCredentials") : t("authJson");
 }
 
 async function api(path, options = {}) {
@@ -331,6 +423,14 @@ function remainingPercent(window) {
   return Math.max(0, Math.min(100, Math.round(100 - used)));
 }
 
+function barLevel(left) {
+  if (left <= 10) return "empty";
+  if (left <= 25) return "low";
+  if (left <= 50) return "mid";
+  if (left <= 75) return "high";
+  return "full";
+}
+
 function renderLimit(window) {
   const fragment = limitTemplate.content.cloneNode(true);
   const root = fragment.querySelector(".limit-line");
@@ -343,8 +443,8 @@ function renderLimit(window) {
   resetText.hidden = left >= 100;
   resetText.textContent = left < 100 ? formatReset(window?.resetsAt) : "";
   fill.style.width = `${left}%`;
-  fill.classList.toggle("low", left <= 25 && left > 5);
-  fill.classList.toggle("empty", left <= 5);
+  fill.classList.remove("full", "high", "mid", "low", "empty");
+  fill.classList.add(barLevel(left));
   root.title = `${used}% ${t("used")}`;
   return fragment;
 }
@@ -559,6 +659,7 @@ async function submitAuthForm(form, endpoint) {
   currentUser = body.user;
   form.reset();
   await loadAccounts();
+  await loadBark();
   await refreshAll();
 }
 
@@ -586,20 +687,99 @@ importForm.addEventListener("submit", async (event) => {
     const formData = new FormData(importForm);
     const file = formData.get("authFile");
     if (!(file instanceof File)) return;
-    const payload = {
-      name: formData.get("name"),
-      authJson: await file.text(),
-    };
-    const body = await api("/api/accounts/import-auth", {
+    const provider = formData.get("provider") === "claude" ? "claude" : "codex";
+    const content = await file.text();
+    const endpoint =
+      provider === "claude" ? "/api/accounts/import-claude" : "/api/accounts/import-auth";
+    const payload =
+      provider === "claude"
+        ? { name: formData.get("name"), credentialsJson: content }
+        : { name: formData.get("name"), authJson: content };
+    const body = await api(endpoint, {
       method: "POST",
       body: JSON.stringify(payload),
     });
     accounts.push(body.account);
     importForm.reset();
+    updateCredentialLabel();
     render();
     await refreshOne(body.account.id);
   } catch (error) {
     window.alert(error.message);
+  }
+});
+
+if (providerSelect) {
+  providerSelect.addEventListener("change", updateCredentialLabel);
+}
+
+function barkConfigFromForm() {
+  const formData = new FormData(barkForm);
+  return {
+    enabled: formData.get("enabled") === "on",
+    serverUrl: formData.get("serverUrl") || "",
+    deviceKey: formData.get("deviceKey") || "",
+    threshold: Number(formData.get("threshold")) || 20,
+    events: {
+      low: formData.get("low") === "on",
+      exhausted: formData.get("exhausted") === "on",
+      reset: formData.get("reset") === "on",
+      error: formData.get("error") === "on",
+    },
+  };
+}
+
+function applyBarkConfig(bark) {
+  barkForm.elements.enabled.checked = Boolean(bark.enabled);
+  barkForm.elements.serverUrl.value = bark.serverUrl || "";
+  barkForm.elements.deviceKey.value = bark.deviceKey || "";
+  barkForm.elements.threshold.value = bark.threshold ?? 20;
+  const events = bark.events || {};
+  barkForm.elements.low.checked = events.low !== false;
+  barkForm.elements.exhausted.checked = events.exhausted !== false;
+  barkForm.elements.reset.checked = events.reset !== false;
+  barkForm.elements.error.checked = events.error !== false;
+}
+
+async function loadBark() {
+  if (!currentUser) return;
+  try {
+    const body = await api("/api/settings/bark");
+    applyBarkConfig(body.bark);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+barkForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  barkMessage.textContent = "";
+  barkMessage.classList.remove("error");
+  try {
+    const body = await api("/api/settings/bark", {
+      method: "PUT",
+      body: JSON.stringify(barkConfigFromForm()),
+    });
+    applyBarkConfig(body.bark);
+    barkMessage.textContent = t("barkSaved");
+  } catch (error) {
+    barkMessage.textContent = error.message;
+    barkMessage.classList.add("error");
+  }
+});
+
+barkTestButton.addEventListener("click", async () => {
+  barkMessage.textContent = "";
+  barkMessage.classList.remove("error");
+  try {
+    await api("/api/settings/bark/test", {
+      method: "POST",
+      body: JSON.stringify(barkConfigFromForm()),
+    });
+    barkMessage.textContent = t("barkTestSent");
+  } catch (error) {
+    barkMessage.textContent = `${t("barkTestFailed")}${error.message}`;
+    barkMessage.classList.add("error");
   }
 });
 
@@ -628,6 +808,7 @@ applyI18n();
 try {
   await loadMe();
   await loadAccounts();
+  await loadBark();
   await refreshAll();
 } catch (error) {
   console.error(error);

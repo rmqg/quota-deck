@@ -2,12 +2,17 @@
 
 **言語**：[简体中文](../README.md) | [繁體中文](README.zh-Hant.md) | [English](README.en.md) | 日本語
 
-QuotaDeck は、OpenAI Codex CLI TUI に表示される次の 2 つの制限を確認するためのセルフホスト型 Web ダッシュボードです。
+QuotaDeck は、OpenAI Codex と Anthropic Claude の 5 時間制限と週間制限をまとめて確認するためのセルフホスト型 Web ダッシュボードです。
 
 - `5h limit`
 - `Weekly limit`
 
-`codex app-server --listen stdio://` を実行し、JSON-RPC メソッド `account/rateLimits/read` を呼び出して同じ制限データを読み取ります。
+読み取り方法：
+
+- Codex：`codex app-server --listen stdio://` を実行し、JSON-RPC メソッド `account/rateLimits/read` を呼び出します。
+- Claude：Claude Code の OAuth 認証情報で Anthropic の `GET /api/oauth/usage` を呼び出し、アクセストークンが失効したらリフレッシュトークンで自動更新します。
+
+[Bark](https://github.com/Finb/Bark) による通知にも対応：サーバーが全アカウントを定期的に監視し、残量わずか・残量ゼロ・再び利用可能・更新失敗のときに iPhone へプッシュできます。
 
 ## 対象ユーザー
 
@@ -21,19 +26,21 @@ QuotaDeck は、OpenAI Codex CLI TUI に表示される次の 2 つの制限を�
 向いていない用途：
 
 - OpenAI API の請求や API token 使用量の確認
-- Claude Pro の制限確認
-- 信頼していないサーバーへの Codex ログイン状態の保存
+- Anthropic API（従量課金）使用量の確認
+- 信頼していないサーバーへの Codex / Claude ログイン状態の保存
 
 ## セキュリティモデル
 
-QuotaDeck は機密性の高い Codex ログインファイルを扱います。使用前に次のルールを理解してください。
+QuotaDeck は機密性の高い Codex / Claude ログインファイルを扱います。使用前に次のルールを理解してください。
 
 - QuotaDeck のローカルアカウントはローカルのデータディレクトリに保存されます。
 - パスワードは `scrypt` ハッシュとして保存されます。平文パスワードは保存されません。
-- アップロードされた Codex `auth.json` は検証後、`APP_SECRET` から派生した鍵で AES-256-GCM 暗号化されて保存されます。
-- 制限を更新するときだけ、サーバーは対象アカウントの認証情報を `/tmp` 配下の一時 `CODEX_HOME` に一時的に復号し、Codex CLI を呼び出した後すぐに一時ディレクトリを削除します。
+- アップロードされた Codex `auth.json` と Claude `credentials.json` は検証後、`APP_SECRET` から派生した鍵で AES-256-GCM 暗号化されて保存されます。
+- Codex の制限を更新するときだけ、サーバーは認証情報を `/tmp` 配下の一時 `CODEX_HOME` に一時的に復号し、Codex CLI を呼び出した後すぐに一時ディレクトリを削除します。
+- Claude の制限を更新するときは、サーバーはメモリ上で OAuth トークンを復号して Anthropic API を呼び出します。トークンが失効すると自動更新し、ローテーション後の新しいトークンを暗号化してデータディレクトリに書き戻します。
 - ブラウザー API は access token、refresh token、id token を返しません。
 - インポートされた各アカウントは QuotaDeck ユーザーに紐づきます。ユーザーは自分がインポートしたアカウントだけを表示できます。
+- Bark 設定はユーザーごとに保存されます。通知はアカウント名と残量状態をユーザー自身が設定した Bark サーバーへ送信します。
 - 管理者ロールはありません。ユーザーロールは 1 種類だけです。
 - 登録を許可するかどうかは `ALLOW_REGISTRATION` で制御します。
 
@@ -156,6 +163,43 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 6. インポート後、ページは `auth.json` から解析できたメールアドレスをアカウント名の下に表示します（存在する場合）。その後、更新します。
 
 `auth.json` を公開チャット、Issue、フォーラム、信頼していないサーバーに送らないでください。
+
+## Claude credentials.json の取得方法
+
+Claude Code にログイン済みのマシンで：
+
+```txt
+~/.claude/.credentials.json
+```
+
+補足：
+
+- Linux/Windows(WSL)：平文ファイル `~/.claude/.credentials.json`。
+- macOS：認証情報はキーチェーン（サービス名 `Claude Code-credentials`）に保存されます。同じ構造の JSON ファイルに書き出してからアップロードしてください。
+- ファイル構造は `{ "claudeAiOauth": { "accessToken": ..., "refreshToken": ..., "expiresAt": ... } }` です。
+
+インポート手順：
+
+1. インポートフォームの「プロバイダー」で `Claude` を選択します。
+2. アカウント名を入力し、ローカルの `.credentials.json` を選択します。
+3. 「インポート」をクリックし、更新します。
+
+サーバーは暗号化された認証情報のみを保存します。Claude のアクセストークンは約 1 時間で失効しますが、QuotaDeck がリフレッシュトークンで自動更新し、ローテーション後の新しい認証情報を暗号化して書き戻します。
+
+`.credentials.json` を公開チャット、Issue、フォーラム、信頼していないサーバーに送らないでください。
+
+## Bark 通知
+
+QuotaDeck は [Bark](https://github.com/Finb/Bark)（iOS プッシュ通知アプリ）で残量を通知できます。各ユーザーがページの「Bark 通知」で自分の設定を行います：
+
+- Bark サーバー URL（既定は `https://api.day.app`、セルフホストの場合は自分の URL）。
+- Bark デバイスキー。
+- 残量しきい値（残りパーセント、既定 20%）。
+- 通知タイミング：残量わずか / 残量ゼロ / 残量回復 / 更新失敗（個別に切り替え可能）。
+
+保存後、「テスト送信」で確認できます。有効にすると、サーバーは `BARK_MONITOR_INTERVAL_MS`（既定 5 分）ごとに全アカウントを更新し、状態が変化したときにプッシュします。ブラウザを開いていなくても通知を受け取れます。`0` にするとサーバー側の監視を無効化します。
+
+Bark 通知はアカウント名と残量状態を設定した Bark サーバーへ送信します。信頼できるサーバーかどうか確認してください。
 
 ## ページの使い方
 

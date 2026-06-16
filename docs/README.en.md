@@ -2,12 +2,17 @@
 
 **Languages**: [简体中文](../README.md) | [繁體中文](README.zh-Hant.md) | English | [日本語](README.ja.md)
 
-QuotaDeck is a self-hosted web dashboard for viewing the two limits shown in the OpenAI Codex CLI TUI:
+QuotaDeck is a self-hosted web dashboard for viewing the 5-hour and weekly limits of both OpenAI Codex and Anthropic Claude in one place:
 
 - `5h limit`
 - `Weekly limit`
 
-It runs `codex app-server --listen stdio://` and calls the JSON-RPC method `account/rateLimits/read` to read the same limit data.
+How it reads them:
+
+- Codex: runs `codex app-server --listen stdio://` and calls the JSON-RPC method `account/rateLimits/read`.
+- Claude: uses the Claude Code OAuth credentials to call Anthropic's `GET /api/oauth/usage`, auto-refreshing with the refresh token when the access token expires.
+
+It can also push notifications via [Bark](https://github.com/Finb/Bark): the server can proactively monitor all accounts on a schedule and notify you when a limit is about to run out, is exhausted, becomes available again, or fails to refresh.
 
 ## Who It Is For
 
@@ -21,19 +26,21 @@ Good fit:
 Not a good fit:
 
 - Monitoring OpenAI API billing or API token usage.
-- Monitoring Claude Pro limits.
-- Storing Codex login state on a server you do not trust.
+- Monitoring Anthropic API (pay-as-you-go) usage.
+- Storing Codex / Claude login state on a server you do not trust.
 
 ## Security Model
 
-QuotaDeck handles sensitive Codex login files. Understand these rules before using it:
+QuotaDeck handles sensitive Codex / Claude login files. Understand these rules before using it:
 
 - Local QuotaDeck accounts are stored in the local data directory.
 - Passwords are stored as `scrypt` hashes. Plaintext passwords are never stored.
-- Uploaded Codex `auth.json` files are validated, then encrypted with AES-256-GCM using a key derived from `APP_SECRET`.
-- When refreshing limits, the server temporarily decrypts one account credential into a temporary `CODEX_HOME` under `/tmp`, calls Codex CLI, then immediately removes the temporary directory.
+- Uploaded Codex `auth.json` and Claude `credentials.json` files are validated, then encrypted with AES-256-GCM using a key derived from `APP_SECRET`.
+- When refreshing Codex limits, the server temporarily decrypts one account credential into a temporary `CODEX_HOME` under `/tmp`, calls Codex CLI, then immediately removes the temporary directory.
+- When refreshing Claude limits, the server decrypts the OAuth token in memory to call the Anthropic API; expired tokens are refreshed automatically and the rotated token is re-encrypted back into the data directory.
 - Browser APIs do not return access tokens, refresh tokens, or ID tokens.
 - Every imported account belongs to a QuotaDeck user. Users can only see accounts they imported.
+- Bark settings are stored per user; pushes send the account name and quota status to the user's own Bark server.
 - There is no administrator role. There is only one user role.
 - Registration is controlled by `ALLOW_REGISTRATION`.
 
@@ -156,6 +163,43 @@ Import steps:
 6. After import, the page shows the email parsed from `auth.json` under the account name when available, then you can refresh.
 
 Do not send `auth.json` to public chats, issues, forums, or servers you do not trust.
+
+## How To Get Claude credentials.json
+
+On a machine where Claude Code is logged in:
+
+```txt
+~/.claude/.credentials.json
+```
+
+Notes:
+
+- Linux/Windows(WSL): plain-text file `~/.claude/.credentials.json`.
+- macOS: credentials live in the Keychain (service `Claude Code-credentials`); export them to a JSON file with the same structure before uploading.
+- The file looks like `{ "claudeAiOauth": { "accessToken": ..., "refreshToken": ..., "expiresAt": ... } }`.
+
+Import steps:
+
+1. Choose `Claude` in the "Provider" selector of the import form.
+2. Enter an account name, select your local `.credentials.json`.
+3. Click "Import", then refresh.
+
+The server stores only the encrypted credentials. Claude access tokens expire after roughly an hour; QuotaDeck refreshes them automatically using the refresh token and writes the rotated credentials back encrypted.
+
+Do not send `.credentials.json` to public chats, issues, forums, or servers you do not trust.
+
+## Bark Notifications
+
+QuotaDeck can alert you about quota status via [Bark](https://github.com/Finb/Bark) (an iOS push app). Each user configures their own settings under "Bark notifications":
+
+- Bark server URL (defaults to `https://api.day.app`; use your own for a self-hosted server).
+- Bark device key.
+- Low-quota threshold (remaining percent, default 20%).
+- Notify on: low quota / exhausted / recovered / refresh failure (each can be toggled).
+
+After saving, use "Send test" to verify. When enabled, the server refreshes all accounts every `BARK_MONITOR_INTERVAL_MS` (default 5 minutes) and pushes on state changes, so you get alerts even with no browser open. Set it to `0` to disable server-side monitoring.
+
+Bark pushes send the account name and quota status to your configured Bark server — make sure you trust it.
 
 ## How To Use The Page
 

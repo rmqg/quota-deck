@@ -2,12 +2,17 @@
 
 **語言**：[简体中文](../README.md) | 繁體中文 | [English](README.en.md) | [日本語](README.ja.md)
 
-QuotaDeck 是一個自託管網頁面板，用來查看 OpenAI Codex CLI TUI 中顯示的兩個額度：
+QuotaDeck 是一個自託管網頁面板，用來集中查看 OpenAI Codex 和 Anthropic Claude 的兩個額度：
 
-- `5h limit`
-- `Weekly limit`
+- `5h limit`（5 小時額度）
+- `Weekly limit`（每週額度）
 
-它會執行 `codex app-server --listen stdio://`，並呼叫 JSON-RPC 方法 `account/rateLimits/read` 讀取同一份額度資料。
+讀取方式：
+
+- Codex：執行 `codex app-server --listen stdio://`，並呼叫 JSON-RPC 方法 `account/rateLimits/read`。
+- Claude：使用 Claude Code 登入憑據（OAuth token）呼叫 Anthropic 的 `GET /api/oauth/usage`，過期時自動以 refresh token 刷新。
+
+也支援透過 [Bark](https://github.com/Finb/Bark) 推播通知：伺服器可定時主動監控所有帳號，在額度即將耗盡、已耗盡、重新可用或刷新失敗時推播到你的 iPhone。
 
 ## 適合誰
 
@@ -21,19 +26,21 @@ QuotaDeck 是一個自託管網頁面板，用來查看 OpenAI Codex CLI TUI 中
 不適合：
 
 - 查看 OpenAI API 帳單或 API token 用量
-- 查看 Claude Pro 額度
-- 在不信任的伺服器上保存 Codex 登入狀態
+- 查看 Anthropic API（按量付費）用量
+- 在不信任的伺服器上保存 Codex / Claude 登入狀態
 
 ## 安全模型
 
-QuotaDeck 會處理敏感的 Codex 登入檔，請先理解這些規則：
+QuotaDeck 會處理敏感的 Codex / Claude 登入檔，請先理解這些規則：
 
 - 本站帳號保存在本機資料目錄。
 - 密碼使用 `scrypt` 雜湊保存，不保存明文密碼。
-- 上傳的 Codex `auth.json` 會先被校驗，然後使用由 `APP_SECRET` 派生出的金鑰透過 AES-256-GCM 加密保存。
-- 重新整理額度時，伺服器才會把某個帳號的憑據暫時解密到 `/tmp` 下的臨時 `CODEX_HOME`，呼叫 Codex CLI 後立即刪除臨時目錄。
+- 上傳的 Codex `auth.json` 和 Claude `credentials.json` 都會先被校驗，然後使用由 `APP_SECRET` 派生出的金鑰透過 AES-256-GCM 加密保存。
+- 重新整理 Codex 額度時，伺服器才會把憑據暫時解密到 `/tmp` 下的臨時 `CODEX_HOME`，呼叫 Codex CLI 後立即刪除臨時目錄。
+- 重新整理 Claude 額度時，伺服器在記憶體中解密 OAuth token 呼叫 Anthropic 介面；token 過期會自動刷新，並把輪換後的新 token 重新加密寫回資料目錄。
 - 瀏覽器介面不會返回 access token、refresh token、id token。
 - 每個匯入帳號都綁定 QuotaDeck 使用者，使用者只能看到自己的匯入帳號。
+- Bark 設定按使用者保存；推播會把帳號名稱和額度狀態傳送到使用者自己配置的 Bark 伺服器。
 - 沒有管理員角色，只有一種使用者。
 - 是否開放註冊由 `ALLOW_REGISTRATION` 控制。
 
@@ -156,6 +163,43 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 6. 匯入後頁面會在帳號名稱下方顯示從 `auth.json` 解析出的信箱（如果存在），再點擊重新整理。
 
 不要把 `auth.json` 發到公開聊天、Issue、論壇，或上傳到不信任的伺服器。
+
+## 如何取得 Claude credentials.json
+
+在已經登入 Claude Code 的電腦上找：
+
+```txt
+~/.claude/.credentials.json
+```
+
+說明：
+
+- Linux/Windows(WSL)：明文檔案 `~/.claude/.credentials.json`。
+- macOS：憑據保存在鑰匙圈（服務名 `Claude Code-credentials`），需先匯出成相同結構的 JSON 檔再上傳。
+- 檔案結構為 `{ "claudeAiOauth": { "accessToken": ..., "refreshToken": ..., "expiresAt": ... } }`。
+
+匯入步驟：
+
+1. 在匯入表單的「平台」選擇 `Claude`。
+2. 填寫帳號名稱，選擇本機的 `.credentials.json`。
+3. 點擊「匯入」，再點重新整理。
+
+伺服器只保存加密後的憑據。Claude 的 access token 約 1 小時過期，QuotaDeck 會用 refresh token 自動刷新，並把輪換後的新憑據重新加密寫回。
+
+不要把 `.credentials.json` 發到公開聊天、Issue、論壇，或上傳到不信任的伺服器。
+
+## Bark 推播通知
+
+QuotaDeck 支援透過 [Bark](https://github.com/Finb/Bark)（iOS 推播 App）提醒額度狀態。每個使用者在頁面的「Bark 推播通知」裡配置自己的：
+
+- Bark 伺服器位址（預設 `https://api.day.app`，自建伺服器填自己的位址）。
+- Bark 裝置 Key。
+- 低額度閾值（剩餘百分比，預設 20%）。
+- 通知時機：額度即將耗盡 / 已耗盡 / 已恢復 / 刷新失敗（可分別開關）。
+
+儲存後可點「傳送測試」驗證。開啟後，伺服器會依 `BARK_MONITOR_INTERVAL_MS`（預設 5 分鐘）定時刷新所有帳號並在狀態變化時推播，即使沒有開啟網頁也能收到提醒。設為 `0` 可關閉伺服器端主動監控。
+
+Bark 推播會把帳號名稱和額度狀態傳送到你配置的 Bark 伺服器，請確認信任該伺服器。
 
 ## 頁面怎麼用
 

@@ -221,7 +221,7 @@ button:disabled {
 }
 
 .import-form {
-  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.6fr) auto;
+  grid-template-columns: minmax(120px, 0.5fr) minmax(160px, 0.9fr) minmax(220px, 1.4fr) auto;
 }
 
 .account-form > *,
@@ -523,12 +523,24 @@ input:focus {
     background-color 180ms ease;
 }
 
+.bar-fill.full {
+  background: linear-gradient(90deg, #1f9d57, #38c172);
+}
+
+.bar-fill.high {
+  background: linear-gradient(90deg, #168ac0, #66ccff);
+}
+
+.bar-fill.mid {
+  background: linear-gradient(90deg, #b88300, #f0b429);
+}
+
 .bar-fill.low {
-  background: var(--warn);
+  background: linear-gradient(90deg, #d05e00, #f59e0b);
 }
 
 .bar-fill.empty {
-  background: var(--danger);
+  background: linear-gradient(90deg, #b42318, #e5544b);
 }
 
 .reset-text,
@@ -541,6 +553,55 @@ input:focus {
 .row-message.error {
   color: var(--danger);
   font-weight: 700;
+}
+
+.bark-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  margin-top: 10px;
+}
+
+.bark-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bark-form input:not([type="checkbox"]) {
+  width: 100%;
+}
+
+.bark-toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.bark-toggle input {
+  width: auto;
+}
+
+.bark-events {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+}
+
+.bark-events legend {
+  font-size: 13px;
+  color: var(--muted);
+  padding: 0 4px;
+}
+
+.bark-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .empty-state {

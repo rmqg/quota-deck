@@ -34,6 +34,14 @@ const refreshTimeoutMs = Number(process.env.REFRESH_TIMEOUT_MS || 25000);
 const sessionMaxAgeSeconds = 60 * 60 * 24 * 30;
 const appSecret = process.env.APP_SECRET || "dev-secret-change-me";
 const allowRegistration = process.env.ALLOW_REGISTRATION === "1";
+const claudeUsageUrl = process.env.CLAUDE_USAGE_URL || "https://api.anthropic.com/api/oauth/usage";
+const claudeTokenUrl = process.env.CLAUDE_OAUTH_TOKEN_URL || "https://console.anthropic.com/v1/oauth/token";
+const claudeClientId = process.env.CLAUDE_OAUTH_CLIENT_ID || "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
+const claudeUserAgent = process.env.CLAUDE_USER_AGENT || "claude-cli/2.0.0 (external, cli)";
+const claudeBeta = process.env.CLAUDE_OAUTH_BETA || "oauth-2025-04-20";
+const httpTimeoutMs = Number(process.env.HTTP_TIMEOUT_MS || 15000);
+const barkMonitorIntervalMs = Number(process.env.BARK_MONITOR_INTERVAL_MS || 5 * 60 * 1000);
+const barkDefaultServer = process.env.BARK_DEFAULT_SERVER || "https://api.day.app";
 const rateBuckets = new Map();
 
 setInterval(() => {
@@ -223,6 +231,41 @@ const loadAccounts = () => loadJson(accountsFile, []);
 const saveAccounts = (accounts) => saveJson(accountsFile, accounts);
 const loadSessions = () => loadJson(sessionsFile, []);
 const saveSessions = (sessions) => saveJson(sessionsFile, sessions);
+
+let accountsWriteChain = Promise.resolve();
+
+function withAccountsLock(task) {
+  const run = accountsWriteChain.then(task, task);
+  accountsWriteChain = run.then(
+    () => {},
+    () => {},
+  );
+  return run;
+}
+
+function persistAccountAuth(accountId, userId, auth) {
+  return withAccountsLock(async () => {
+    const accounts = await loadAccounts();
+    const account = accounts.find((item) => item.id === accountId && item.userId === userId);
+    if (!account) {
+      return;
+    }
+    account.encryptedAuth = encryptJson(auth);
+    await saveAccounts(accounts);
+  });
+}
+
+function persistBarkState(accountId, userId, barkState) {
+  return withAccountsLock(async () => {
+    const accounts = await loadAccounts();
+    const account = accounts.find((item) => item.id === accountId && item.userId === userId);
+    if (!account) {
+      return;
+    }
+    account.barkState = barkState;
+    await saveAccounts(accounts);
+  });
+}
 
 function normalizeUsername(username) {
   return String(username || "").trim().toLowerCase();
@@ -543,17 +586,179 @@ function requestCodexRateLimits(codexHome) {
   });
 }
 
+function validateClaudeCredentials(input) {
+  const parsed = typeof input === "string" ? JSON.parse(input) : input;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("credentials.json must contain a JSON object");
+  }
+  const oauth = parsed.claudeAiOauth && typeof parsed.claudeAiOauth === "object"
+    ? parsed.claudeAiOauth
+    : parsed;
+  for (const key of ["accessToken", "refreshToken"]) {
+    if (typeof oauth[key] !== "string" || !oauth[key]) {
+      throw new Error(`credentials.json is missing claudeAiOauth.${key}`);
+    }
+  }
+  const expiresAt = Number(oauth.expiresAt);
+  return {
+    accessToken: oauth.accessToken,
+    refreshToken: oauth.refreshToken,
+    expiresAt: Number.isFinite(expiresAt) ? expiresAt : 0,
+    scopes: Array.isArray(oauth.scopes) ? oauth.scopes : [],
+    subscriptionType: typeof oauth.subscriptionType === "string" ? oauth.subscriptionType : null,
+  };
+}
+
+async function createAccountFromClaude(user, input) {
+  const credentials = validateClaudeCredentials(input.credentialsJson);
+  const name = String(input.name || "Claude Account").trim();
+  if (!name) {
+    throw new Error("Account name is required");
+  }
+
+  const account = {
+    id: randomUUID(),
+    userId: user.id,
+    provider: "claude",
+    name,
+    email: normalizeEmail(input.email),
+    identity: null,
+    encryptedAuth: encryptJson(credentials),
+    createdAt: new Date().toISOString(),
+  };
+  const accounts = await loadAccounts();
+  accounts.push(account);
+  await saveAccounts(accounts);
+  return account;
+}
+
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), httpTimeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function refreshClaudeToken(credentials) {
+  const response = await fetchWithTimeout(claudeTokenUrl, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "user-agent": claudeUserAgent,
+      "anthropic-beta": claudeBeta,
+    },
+    body: JSON.stringify({
+      grant_type: "refresh_token",
+      refresh_token: credentials.refreshToken,
+      client_id: claudeClientId,
+    }),
+  });
+  if (!response.ok) {
+    const detail = (await response.text().catch(() => "")).slice(0, 200);
+    throw new Error(`Claude token refresh failed (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
+  }
+  const body = await response.json();
+  if (!body.access_token) {
+    throw new Error("Claude token refresh returned no access_token");
+  }
+  return {
+    ...credentials,
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token || credentials.refreshToken,
+    expiresAt: body.expires_in ? Date.now() + Number(body.expires_in) * 1000 : 0,
+  };
+}
+
+async function ensureClaudeAccessToken(account) {
+  const credentials = decryptJson(account.encryptedAuth);
+  if (credentials.expiresAt && credentials.expiresAt > Date.now() + 60_000) {
+    return credentials;
+  }
+  const refreshed = await refreshClaudeToken(credentials);
+  account.encryptedAuth = encryptJson(refreshed);
+  await persistAccountAuth(account.id, account.userId, refreshed);
+  return refreshed;
+}
+
+function claudeWindow(window, windowDurationMins) {
+  if (!window || typeof window !== "object") {
+    return null;
+  }
+  const used = Number(window.utilization);
+  const resetsAt = window.resets_at ? Math.floor(Date.parse(window.resets_at) / 1000) : null;
+  return {
+    usedPercent: Number.isFinite(used) ? used : 0,
+    windowDurationMins,
+    resetsAt: Number.isFinite(resetsAt) ? resetsAt : null,
+  };
+}
+
+function normalizeClaudeUsage(data) {
+  const weekly = data.seven_day || data.seven_day_sonnet || data.seven_day_opus;
+  return {
+    planType: "claude",
+    primary: claudeWindow(data.five_hour, 300),
+    secondary: claudeWindow(weekly, 10080),
+  };
+}
+
+async function requestClaudeUsage(account) {
+  const credentials = await ensureClaudeAccessToken(account);
+  const response = await fetchWithTimeout(claudeUsageUrl, {
+    method: "GET",
+    headers: {
+      authorization: `Bearer ${credentials.accessToken}`,
+      "content-type": "application/json",
+      "user-agent": claudeUserAgent,
+      "anthropic-beta": claudeBeta,
+    },
+  });
+  if (response.status === 401) {
+    throw new Error("Claude credentials are no longer valid (401). Re-export credentials.json.");
+  }
+  if (!response.ok) {
+    const detail = (await response.text().catch(() => "")).slice(0, 200);
+    throw new Error(`Claude usage read failed (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
+  }
+  return normalizeClaudeUsage(await response.json());
+}
+
+function selectedSnapshot(result) {
+  if (!result) {
+    return null;
+  }
+  if (!result.rateLimitsByLimitId) {
+    return result.rateLimits || null;
+  }
+  return (
+    result.rateLimitsByLimitId.codex ||
+    Object.values(result.rateLimitsByLimitId)[0] ||
+    result.rateLimits
+  );
+}
+
 async function refreshAccount(account) {
   const startedAt = Date.now();
   try {
-    const result = await withTemporaryCodexHome(account, requestCodexRateLimits);
+    let rateLimits;
+    let rateLimitsByLimitId = null;
+    if (account.provider === "claude") {
+      rateLimits = await requestClaudeUsage(account);
+    } else {
+      const result = await withTemporaryCodexHome(account, requestCodexRateLimits);
+      rateLimits = result.rateLimits;
+      rateLimitsByLimitId = result.rateLimitsByLimitId || null;
+    }
     return {
       account: publicAccount(account),
       ok: true,
       refreshedAt: new Date().toISOString(),
       latencyMs: Date.now() - startedAt,
-      rateLimits: result.rateLimits,
-      rateLimitsByLimitId: result.rateLimitsByLimitId || null,
+      rateLimits,
+      rateLimitsByLimitId,
     };
   } catch (error) {
     return {
@@ -563,6 +768,160 @@ async function refreshAccount(account) {
       latencyMs: Date.now() - startedAt,
       error: error.message,
     };
+  }
+}
+
+const defaultBarkEvents = { low: true, exhausted: true, reset: true, error: true };
+
+function publicBark(user) {
+  const bark = user.bark || {};
+  return {
+    enabled: Boolean(bark.enabled),
+    serverUrl: bark.serverUrl || barkDefaultServer,
+    deviceKey: bark.deviceKey || "",
+    threshold: Number.isFinite(Number(bark.threshold)) ? Number(bark.threshold) : 20,
+    events: { ...defaultBarkEvents, ...(bark.events || {}) },
+  };
+}
+
+function normalizeBarkInput(input) {
+  const threshold = Math.round(Number(input.threshold));
+  const events = input.events && typeof input.events === "object" ? input.events : {};
+  return {
+    enabled: Boolean(input.enabled),
+    serverUrl: String(input.serverUrl || barkDefaultServer).trim().replace(/\/+$/, ""),
+    deviceKey: String(input.deviceKey || "").trim(),
+    threshold: Number.isFinite(threshold) ? Math.min(99, Math.max(1, threshold)) : 20,
+    events: {
+      low: events.low !== false,
+      exhausted: events.exhausted !== false,
+      reset: events.reset !== false,
+      error: events.error !== false,
+    },
+  };
+}
+
+async function sendBark(bark, payload) {
+  if (!bark || !bark.deviceKey) {
+    throw new Error("Bark device key is not configured");
+  }
+  const base = String(bark.serverUrl || barkDefaultServer).replace(/\/+$/, "");
+  const response = await fetchWithTimeout(`${base}/${encodeURIComponent(bark.deviceKey)}`, {
+    method: "POST",
+    headers: { "content-type": "application/json; charset=utf-8" },
+    body: JSON.stringify({
+      title: payload.title,
+      body: payload.body,
+      group: "QuotaDeck",
+    }),
+  });
+  if (!response.ok) {
+    const detail = (await response.text().catch(() => "")).slice(0, 200);
+    throw new Error(`Bark push failed (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
+  }
+}
+
+function windowLevel(window, threshold) {
+  if (!window) {
+    return "ok";
+  }
+  const remaining = 100 - (Number(window.usedPercent) || 0);
+  if (remaining <= 0) {
+    return "empty";
+  }
+  if (remaining <= threshold) {
+    return "low";
+  }
+  return "ok";
+}
+
+function windowRemaining(window) {
+  return window ? Math.max(0, Math.round(100 - (Number(window.usedPercent) || 0))) : 0;
+}
+
+async function evaluateBark(user, account, result) {
+  const bark = publicBark(user);
+  const previous = account.barkState || {};
+  const nextState = { error: !result.ok };
+  const messages = [];
+
+  if (!result.ok) {
+    if (bark.events.error && !previous.error) {
+      messages.push({
+        title: `⚠️ ${account.name} 刷新失败`,
+        body: result.error || "未知错误",
+      });
+    }
+  } else {
+    const snapshot = selectedSnapshot(result);
+    const windows = [
+      ["fiveHour", snapshot?.primary, "5 小时额度"],
+      ["weekly", snapshot?.secondary, "每周额度"],
+    ];
+    for (const [key, window, label] of windows) {
+      const level = windowLevel(window, bark.threshold);
+      nextState[key] = level;
+      const old = previous[key] || "ok";
+      if (level === old) {
+        continue;
+      }
+      if (level === "empty" && bark.events.exhausted) {
+        messages.push({ title: `🚫 ${account.name} ${label}已耗尽`, body: `${label} 已用尽` });
+      } else if (level === "low" && old === "ok" && bark.events.low) {
+        messages.push({
+          title: `⏳ ${account.name} ${label}即将耗尽`,
+          body: `${label} 仅剩 ${windowRemaining(window)}%`,
+        });
+      } else if (level === "ok" && (old === "low" || old === "empty") && bark.events.reset) {
+        messages.push({
+          title: `✅ ${account.name} ${label}已恢复`,
+          body: `${label} 剩余 ${windowRemaining(window)}%`,
+        });
+      }
+    }
+  }
+
+  const changed =
+    previous.error !== nextState.error ||
+    previous.fiveHour !== nextState.fiveHour ||
+    previous.weekly !== nextState.weekly;
+  if (changed) {
+    await persistBarkState(account.id, account.userId, nextState);
+  }
+  for (const message of messages) {
+    try {
+      await sendBark(bark, message);
+    } catch (error) {
+      console.error("Bark push error:", error.message);
+    }
+  }
+}
+
+let barkMonitorRunning = false;
+
+async function runBarkMonitor() {
+  if (barkMonitorRunning) {
+    return;
+  }
+  barkMonitorRunning = true;
+  try {
+    const users = await loadUsers();
+    const active = users.filter((user) => user.bark?.enabled && user.bark?.deviceKey);
+    if (!active.length) {
+      return;
+    }
+    const accounts = await loadAccounts();
+    for (const user of active) {
+      const userAccounts = accounts.filter((account) => account.userId === user.id);
+      for (const account of userAccounts) {
+        const result = await refreshAccount(account);
+        await evaluateBark(user, account, result);
+      }
+    }
+  } catch (error) {
+    console.error("Bark monitor error:", error.message);
+  } finally {
+    barkMonitorRunning = false;
   }
 }
 
@@ -633,6 +992,52 @@ async function handleApi(req, res, url) {
     const body = await readBody(req);
     const account = await createAccountFromAuth(user, body);
     json(res, 201, { account: publicAccount(account) });
+    return;
+  }
+
+  if (url.pathname === "/api/accounts/import-claude" && req.method === "POST") {
+    if (!checkRate(req, res, "import-claude", 20, 60 * 60 * 1000)) return;
+    const body = await readBody(req);
+    const account = await createAccountFromClaude(user, body);
+    json(res, 201, { account: publicAccount(account) });
+    return;
+  }
+
+  if (url.pathname === "/api/settings/bark" && req.method === "GET") {
+    json(res, 200, { bark: publicBark(user) });
+    return;
+  }
+
+  if (url.pathname === "/api/settings/bark" && req.method === "PUT") {
+    const body = await readBody(req);
+    const bark = normalizeBarkInput(body);
+    const users = await loadUsers();
+    const stored = users.find((item) => item.id === user.id);
+    if (!stored) {
+      json(res, 404, { error: "User not found" });
+      return;
+    }
+    stored.bark = bark;
+    await saveUsers(users);
+    json(res, 200, { bark: publicBark(stored) });
+    return;
+  }
+
+  if (url.pathname === "/api/settings/bark/test" && req.method === "POST") {
+    if (!checkRate(req, res, "bark-test", 10, 10 * 60 * 1000)) return;
+    const body = await readBody(req);
+    const bark = normalizeBarkInput(body);
+    if (!bark.deviceKey) {
+      json(res, 400, { error: "Bark device key is required" });
+      return;
+    }
+    try {
+      await sendBark(bark, { title: "QuotaDeck", body: "测试通知 / Test notification" });
+    } catch (error) {
+      json(res, 502, { error: error.message });
+      return;
+    }
+    json(res, 200, { ok: true });
     return;
   }
 
@@ -756,3 +1161,9 @@ server.listen(port, () => {
   const secretState = process.env.APP_SECRET ? "APP_SECRET configured" : "dev secret";
   console.log(`QuotaDeck listening on http://127.0.0.1:${port} (${secretState})`);
 });
+
+if (barkMonitorIntervalMs > 0) {
+  setInterval(() => {
+    runBarkMonitor().catch((error) => console.error("Bark monitor error:", error.message));
+  }, barkMonitorIntervalMs).unref();
+}

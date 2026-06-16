@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>QuotaDeck</title>
-    <link rel="stylesheet" href="/styles.css?v=20260605-1" />
+    <link rel="stylesheet" href="/styles.css?v=20260615-1" />
   </head>
   <body>
     <main class="shell">
@@ -67,11 +67,18 @@
         <section class="account-panel" aria-label="Import account">
           <form id="importForm" class="account-form import-form">
             <label>
+              <span data-i18n="provider">Provider</span>
+              <select name="provider" id="providerSelect">
+                <option value="codex" data-i18n="providerCodex">Codex / ChatGPT</option>
+                <option value="claude" data-i18n="providerClaude">Claude</option>
+              </select>
+            </label>
+            <label>
               <span data-i18n="accountName">Account Name</span>
               <input name="name" autocomplete="off" data-i18n-placeholder="accountNamePlaceholder" placeholder="OpenAI Business" required />
             </label>
             <label>
-              <span data-i18n="authJson">Codex auth.json</span>
+              <span id="credentialLabel">Codex auth.json</span>
               <input name="authFile" type="file" accept=".json,application/json" required />
             </label>
             <button type="submit" data-i18n="import">Import</button>
@@ -82,8 +89,45 @@
             <ol>
               <li data-i18n-html="guideOne">On your local machine, find Codex auth: <code>${CODEX_HOME:-$HOME/.codex}/auth.json</code></li>
               <li data-i18n-html="guideTwo">Upload that file here. It is encrypted at rest and only decrypted into a temporary directory while refreshing limits.</li>
-              <li data-i18n="guideThree">For a public deployment, use a strong site password and rotate Codex login if you no longer trust the server.</li>
+              <li data-i18n-html="guideClaude">For Claude, upload the Claude Code login file: <code>~/.claude/.credentials.json</code></li>
+              <li data-i18n="guideThree">For a public deployment, use a strong site password and rotate the login if you no longer trust the server.</li>
             </ol>
+          </details>
+        </section>
+
+        <section class="account-panel" aria-label="Bark settings">
+          <details class="guide-details">
+            <summary data-i18n="barkTitle">Bark notifications</summary>
+            <form id="barkForm" class="account-form bark-form">
+              <label class="bark-toggle">
+                <input type="checkbox" name="enabled" />
+                <span data-i18n="barkEnabled">Enable Bark notifications</span>
+              </label>
+              <label>
+                <span data-i18n="barkServerUrl">Bark server URL</span>
+                <input name="serverUrl" autocomplete="off" placeholder="https://api.day.app" />
+              </label>
+              <label>
+                <span data-i18n="barkDeviceKey">Bark device key</span>
+                <input name="deviceKey" autocomplete="off" />
+              </label>
+              <label>
+                <span data-i18n="barkThreshold">Low-quota threshold (%)</span>
+                <input name="threshold" type="number" min="1" max="99" />
+              </label>
+              <fieldset class="bark-events">
+                <legend data-i18n="barkEvents">Notify on</legend>
+                <label class="bark-toggle"><input type="checkbox" name="low" /><span data-i18n="barkEventLow">Low quota</span></label>
+                <label class="bark-toggle"><input type="checkbox" name="exhausted" /><span data-i18n="barkEventExhausted">Quota exhausted</span></label>
+                <label class="bark-toggle"><input type="checkbox" name="reset" /><span data-i18n="barkEventReset">Quota reset</span></label>
+                <label class="bark-toggle"><input type="checkbox" name="error" /><span data-i18n="barkEventError">Refresh failure</span></label>
+              </fieldset>
+              <div class="bark-actions">
+                <button type="submit" data-i18n="barkSave">Save</button>
+                <button type="button" id="barkTest" class="ghost-button" data-i18n="barkTest">Send test</button>
+              </div>
+              <p id="barkMessage" class="row-message"></p>
+            </form>
           </details>
         </section>
 
@@ -138,6 +182,6 @@
       </div>
     </template>
 
-    <script src="/app.js?v=20260531-2" type="module"></script>
+    <script src="/app.js?v=20260615-1" type="module"></script>
   </body>
 </html>
