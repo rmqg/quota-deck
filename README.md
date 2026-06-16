@@ -190,7 +190,21 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 
 ## Bark 推送通知
 
-QuotaDeck 支持通过 [Bark](https://github.com/Finb/Bark)（iOS 推送 App）提醒额度状态。每个用户在页面的“Bark 推送通知”里配置自己的：
+QuotaDeck 支持通过 [Bark](https://github.com/Finb/Bark)（iOS 推送 App）提醒额度状态。
+
+### 快速上手
+
+1. iPhone 在 App Store 搜索安装 **Bark**。
+2. 打开 Bark，首页会显示一条形如 `https://api.day.app/abcd1234/` 的地址，其中 `abcd1234` 就是你的 **device key**（点一下可复制）。
+3. 在 QuotaDeck 登录后展开“Bark 推送通知”：
+   - **Bark 服务器地址**：用官方服务器就填 `https://api.day.app`（默认值）。
+   - **Bark 设备 Key**：填上一步的 `abcd1234`。
+   - **低额度阈值**：剩余百分比，默认 `20`（即剩余低于 20% 时提醒）。
+   - 勾选需要的“通知时机”，并勾上最上面的“启用 Bark 推送”。
+4. 点“保存”，再点“发送测试”，iPhone 收到一条 QuotaDeck 通知就说明配置成功。
+5. 之后系统会按设置自动提醒，无需再手动操作。
+
+每个用户在页面的“Bark 推送通知”里配置自己的：
 
 - Bark 服务器地址（默认 `https://api.day.app`，自建服务器填自己的地址）。
 - Bark 设备 Key。

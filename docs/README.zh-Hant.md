@@ -190,7 +190,21 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 
 ## Bark 推播通知
 
-QuotaDeck 支援透過 [Bark](https://github.com/Finb/Bark)（iOS 推播 App）提醒額度狀態。每個使用者在頁面的「Bark 推播通知」裡配置自己的：
+QuotaDeck 支援透過 [Bark](https://github.com/Finb/Bark)（iOS 推播 App）提醒額度狀態。
+
+### 快速上手
+
+1. iPhone 在 App Store 搜尋安裝 **Bark**。
+2. 開啟 Bark，首頁會顯示一條形如 `https://api.day.app/abcd1234/` 的位址，其中 `abcd1234` 就是你的 **device key**（點一下可複製）。
+3. 在 QuotaDeck 登入後展開「Bark 推播通知」：
+   - **Bark 伺服器位址**：用官方伺服器就填 `https://api.day.app`（預設值）。
+   - **Bark 裝置 Key**：填上一步的 `abcd1234`。
+   - **低額度閾值**：剩餘百分比，預設 `20`（即剩餘低於 20% 時提醒）。
+   - 勾選需要的「通知時機」，並勾上最上面的「啟用 Bark 推播」。
+4. 點「儲存」，再點「傳送測試」，iPhone 收到一條 QuotaDeck 通知就代表配置成功。
+5. 之後系統會依設定自動提醒，無需再手動操作。
+
+每個使用者在頁面的「Bark 推播通知」裡配置自己的：
 
 - Bark 伺服器位址（預設 `https://api.day.app`，自建伺服器填自己的位址）。
 - Bark 裝置 Key。

@@ -190,7 +190,21 @@ Do not send `.credentials.json` to public chats, issues, forums, or servers you 
 
 ## Bark Notifications
 
-QuotaDeck can alert you about quota status via [Bark](https://github.com/Finb/Bark) (an iOS push app). Each user configures their own settings under "Bark notifications":
+QuotaDeck can alert you about quota status via [Bark](https://github.com/Finb/Bark) (an iOS push app).
+
+### Quick Start
+
+1. Install **Bark** from the App Store on your iPhone.
+2. Open Bark. The home screen shows an address like `https://api.day.app/abcd1234/`, where `abcd1234` is your **device key** (tap to copy).
+3. After logging in to QuotaDeck, expand "Bark notifications":
+   - **Bark server URL**: use `https://api.day.app` (the default) for the official server.
+   - **Bark device key**: paste the `abcd1234` from the previous step.
+   - **Low-quota threshold**: remaining percent, default `20` (alert when below 20% left).
+   - Tick the "Notify on" events you want, and check "Enable Bark notifications" at the top.
+4. Click "Save", then "Send test". A QuotaDeck notification on your iPhone means it works.
+5. From then on, alerts are sent automatically — no manual action needed.
+
+Each user configures their own settings under "Bark notifications":
 
 - Bark server URL (defaults to `https://api.day.app`; use your own for a self-hosted server).
 - Bark device key.
