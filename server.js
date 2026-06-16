@@ -39,9 +39,6 @@ const claudeTokenUrl = process.env.CLAUDE_OAUTH_TOKEN_URL || "https://console.an
 const claudeClientId = process.env.CLAUDE_OAUTH_CLIENT_ID || "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 const claudeUserAgent = process.env.CLAUDE_USER_AGENT || "claude-code/2.0.0";
 const claudeBeta = process.env.CLAUDE_OAUTH_BETA || "oauth-2025-04-20";
-const claudeUsageCacheMs = Number(process.env.CLAUDE_USAGE_CACHE_MS || 60_000);
-const claudeForceMinMs = Number(process.env.CLAUDE_FORCE_MIN_MS || 8_000);
-const claudeRateLimitBackoffMs = Number(process.env.CLAUDE_RATELIMIT_BACKOFF_MS || 180_000);
 const httpTimeoutMs = Number(process.env.HTTP_TIMEOUT_MS || 15000);
 const barkMonitorIntervalMs = Number(process.env.BARK_MONITOR_INTERVAL_MS || 5 * 60 * 1000);
 const barkDefaultServer = process.env.BARK_DEFAULT_SERVER || "https://api.day.app";
@@ -708,32 +705,7 @@ function normalizeClaudeUsage(data) {
   };
 }
 
-const claudeUsageCache = new Map();
-
-async function requestClaudeUsage(account, options = {}) {
-  const now = Date.now();
-  const cached = claudeUsageCache.get(account.id);
-  const age = cached?.fetchedAt ? now - cached.fetchedAt : Infinity;
-
-  // While backing off after a 429, serve last-good if available instead of retrying.
-  if (cached?.rateLimitedUntil && cached.rateLimitedUntil > now) {
-    if (cached.rateLimits) {
-      return cached.rateLimits;
-    }
-    throw new Error("Claude usage rate limited (429); backing off, retry later.");
-  }
-  // Auto-refresh serves cached usage within the TTL to avoid hammering the
-  // per-token rate limit; a forced (manual) refresh bypasses it, but a tight
-  // min-interval still guards against rapid repeated clicks.
-  if (cached?.rateLimits) {
-    if (!options.force && age < claudeUsageCacheMs) {
-      return cached.rateLimits;
-    }
-    if (options.force && age < claudeForceMinMs) {
-      return cached.rateLimits;
-    }
-  }
-
+async function requestClaudeUsage(account) {
   const credentials = await ensureClaudeAccessToken(account);
   const response = await fetchWithTimeout(claudeUsageUrl, {
     method: "GET",
@@ -747,23 +719,11 @@ async function requestClaudeUsage(account, options = {}) {
   if (response.status === 401) {
     throw new Error("Claude credentials are no longer valid (401). Re-export credentials.json.");
   }
-  if (response.status === 429) {
-    claudeUsageCache.set(account.id, {
-      ...cached,
-      rateLimitedUntil: now + claudeRateLimitBackoffMs,
-    });
-    if (cached?.rateLimits) {
-      return cached.rateLimits;
-    }
-    throw new Error("Claude usage rate limited (429); backing off, retry later.");
-  }
   if (!response.ok) {
     const detail = (await response.text().catch(() => "")).slice(0, 200);
     throw new Error(`Claude usage read failed (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
   }
-  const rateLimits = normalizeClaudeUsage(await response.json());
-  claudeUsageCache.set(account.id, { rateLimits, fetchedAt: now });
-  return rateLimits;
+  return normalizeClaudeUsage(await response.json());
 }
 
 function selectedSnapshot(result) {
@@ -780,13 +740,13 @@ function selectedSnapshot(result) {
   );
 }
 
-async function refreshAccount(account, options = {}) {
+async function refreshAccount(account) {
   const startedAt = Date.now();
   try {
     let rateLimits;
     let rateLimitsByLimitId = null;
     if (account.provider === "claude") {
-      rateLimits = await requestClaudeUsage(account, options);
+      rateLimits = await requestClaudeUsage(account);
     } else {
       const result = await withTemporaryCodexHome(account, requestCodexRateLimits);
       rateLimits = result.rateLimits;
@@ -1094,7 +1054,6 @@ async function handleApi(req, res, url) {
       (item) => !(item.id === id && item.userId === user.id),
     );
     await saveAccounts(remainingAccounts);
-    claudeUsageCache.delete(id);
     json(res, 200, {
       ok: true,
       deletedId: id,
@@ -1111,9 +1070,8 @@ async function handleApi(req, res, url) {
   }
 
   if (url.pathname === "/api/limits/refresh" && req.method === "POST") {
-    const force = url.searchParams.get("force") === "1";
     const accounts = (await loadAccounts()).filter((account) => account.userId === user.id);
-    const results = await Promise.all(accounts.map((account) => refreshAccount(account, { force })));
+    const results = await Promise.all(accounts.map(refreshAccount));
     json(res, 200, { results });
     return;
   }
@@ -1135,7 +1093,6 @@ async function handleApi(req, res, url) {
   const limitRefreshMatch = url.pathname.match(/^\/api\/limits\/([^/]+)\/refresh$/);
   if (limitRefreshMatch && req.method === "POST") {
     const id = decodeURIComponent(limitRefreshMatch[1]);
-    const force = url.searchParams.get("force") === "1";
     const account = (await loadAccounts()).find(
       (item) => item.id === id && item.userId === user.id,
     );
@@ -1143,7 +1100,7 @@ async function handleApi(req, res, url) {
       json(res, 404, { error: "Account not found" });
       return;
     }
-    json(res, 200, await refreshAccount(account, { force }));
+    json(res, 200, await refreshAccount(account));
     return;
   }
 
