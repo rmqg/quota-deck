@@ -226,7 +226,7 @@ Top buttons:
 
 Account card buttons:
 
-- The email parsed from `auth.json` is shown under the account name when available, making multiple accounts easier to tell apart.
+- The account email is shown under the account name (parsed from `auth.json` for Codex, fetched on import for Claude), making multiple accounts easier to tell apart.
 - `↻`: refresh only this account.
 - `×`: delete this account configuration. QuotaDeck asks for confirmation first. This does not affect Codex / ChatGPT itself.
 
@@ -240,7 +240,7 @@ Limit bars:
 
 - `5h limit`: the `5h limit` shown in the Codex CLI TUI.
 - `Weekly limit`: the `Weekly limit` shown in the Codex CLI TUI.
-- When a limit shows `100%` remaining, the page hides the rolling-window reset timestamp returned by Codex. Below `100%`, it shows the reset time.
+- When a limit shows `100%` remaining, the page hides the reset timestamp. Below `100%`, it shows the reset time and how long until it resets.
 - Only the `5h limit` displays `1%` used or less as `100%` remaining to match the native TUI behavior. `Weekly limit` displays Codex's returned value.
 
 ## Updates, Backups, And Restore

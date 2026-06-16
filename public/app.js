@@ -33,10 +33,10 @@ const translations = {
     barkSaved: "已保存 Bark 设置",
     barkTestSent: "测试通知已发送",
     barkTestFailed: "发送失败：",
-    guideTitle: "如何获取 auth.json",
+    guideTitle: "如何获取登录文件",
     guideOne: "在本机找到 Codex 登录文件：<code>${CODEX_HOME:-$HOME/.codex}/auth.json</code>",
     guideTwo: "在这里上传该文件。服务器只保存加密后的凭据，刷新额度时才临时解密。",
-    guideThree: "公开部署时请使用强密码；不再信任服务器时请轮换 Codex 登录。",
+    guideThree: "公开部署时请使用强密码；不再信任服务器时请轮换对应账号的登录。",
     accounts: "账号",
     healthy: "正常",
     updated: "更新",
@@ -47,6 +47,7 @@ const translations = {
     updatedIn: "更新耗时",
     resetUnavailable: "无重置时间",
     resets: "重置于",
+    resetsIn: "还剩",
     left: "剩余",
     used: "已用",
     limit: "额度",
@@ -54,7 +55,7 @@ const translations = {
     weekly: "每周额度",
     authRequired: "请先登录",
     importDone: "已导入账号",
-    deleteConfirm: "确定删除“{name}”吗？这不会影响 Codex / ChatGPT 本身。",
+    deleteConfirm: "确定删除“{name}”吗？这不会影响 Codex / Claude 本身。",
     beginnerGuideTitle: "小白使用说明",
     beginnerGuideBody: `
       <h3>这个页面能做什么</h3>
@@ -62,15 +63,15 @@ const translations = {
       <h3>第一次使用</h3>
       <ol>
         <li>先注册一个本站账号。公开部署时，创建好自己的账号后，应在服务器里把 <code>ALLOW_REGISTRATION</code> 改成 <code>0</code> 并重启容器，避免陌生人注册。</li>
-        <li>在你自己的电脑上确认 Codex CLI 已经登录。一般登录文件在 <code>\${CODEX_HOME:-$HOME/.codex}/auth.json</code>。</li>
-        <li>填写一个容易识别的账号名称，选择 <code>auth.json</code>，点击导入。服务器只保存加密后的凭据。</li>
+        <li>确认你要监控的工具已经登录：Codex 登录文件一般在 <code>\${CODEX_HOME:-$HOME/.codex}/auth.json</code>，Claude Code 在 <code>~/.claude/.credentials.json</code>。</li>
+        <li>在导入表单选择平台（Codex 或 Claude），填写一个容易识别的账号名称，选择对应的登录文件，点击导入。服务器只保存加密后的凭据。</li>
         <li>导入后可以点顶部刷新更新所有账号，也可以点每个账号右侧的小刷新只更新那一个账号。</li>
       </ol>
       <h3>安全注意</h3>
       <ul>
-        <li>不要把 <code>auth.json</code> 发到公开聊天、Issue、论坛或别人控制的服务器。</li>
+        <li>不要把登录文件（<code>auth.json</code> / <code>credentials.json</code>）发到公开聊天、Issue、论坛或别人控制的服务器。</li>
         <li><code>APP_SECRET</code> 必须长期保持不变；改掉后旧凭据无法解密。</li>
-        <li>不再信任某台服务器时，请重新登录或轮换 Codex 登录，让旧凭据失效。</li>
+        <li>不再信任某台服务器时，请重新登录或轮换对应账号的登录，让旧凭据失效。</li>
       </ul>
     `,
   },
@@ -108,10 +109,10 @@ const translations = {
     barkSaved: "已儲存 Bark 設定",
     barkTestSent: "測試通知已傳送",
     barkTestFailed: "傳送失敗：",
-    guideTitle: "如何取得 auth.json",
+    guideTitle: "如何取得登入檔",
     guideOne: "在本機找到 Codex 登入檔：<code>${CODEX_HOME:-$HOME/.codex}/auth.json</code>",
     guideTwo: "在這裡上傳該檔案。伺服器只保存加密後的憑據，刷新額度時才暫時解密。",
-    guideThree: "公開部署時請使用強密碼；不再信任伺服器時請輪換 Codex 登入。",
+    guideThree: "公開部署時請使用強密碼；不再信任伺服器時請輪換對應帳號的登入。",
     accounts: "帳號",
     healthy: "正常",
     updated: "更新",
@@ -122,6 +123,7 @@ const translations = {
     updatedIn: "更新耗時",
     resetUnavailable: "無重置時間",
     resets: "重置於",
+    resetsIn: "還剩",
     left: "剩餘",
     used: "已用",
     limit: "額度",
@@ -129,7 +131,7 @@ const translations = {
     weekly: "每週額度",
     authRequired: "請先登入",
     importDone: "已匯入帳號",
-    deleteConfirm: "確定刪除「{name}」嗎？這不會影響 Codex / ChatGPT 本身。",
+    deleteConfirm: "確定刪除「{name}」嗎？這不會影響 Codex / Claude 本身。",
     beginnerGuideTitle: "新手使用說明",
     beginnerGuideBody: `
       <h3>這個頁面能做什麼</h3>
@@ -137,15 +139,15 @@ const translations = {
       <h3>第一次使用</h3>
       <ol>
         <li>先註冊一個本站帳號。公開部署時，建立好自己的帳號後，應在伺服器把 <code>ALLOW_REGISTRATION</code> 改成 <code>0</code> 並重啟容器，避免陌生人註冊。</li>
-        <li>在你自己的電腦上確認 Codex CLI 已經登入。一般登入檔在 <code>\${CODEX_HOME:-$HOME/.codex}/auth.json</code>。</li>
-        <li>填寫一個容易識別的帳號名稱，選擇 <code>auth.json</code>，點擊匯入。伺服器只保存加密後的憑據。</li>
+        <li>確認你要監控的工具已經登入：Codex 登入檔一般在 <code>\${CODEX_HOME:-$HOME/.codex}/auth.json</code>，Claude Code 在 <code>~/.claude/.credentials.json</code>。</li>
+        <li>在匯入表單選擇平台（Codex 或 Claude），填寫一個容易識別的帳號名稱，選擇對應的登入檔，點擊匯入。伺服器只保存加密後的憑據。</li>
         <li>匯入後可以點頂部重新整理更新所有帳號，也可以點每個帳號右側的小重新整理只更新那一個帳號。</li>
       </ol>
       <h3>安全注意</h3>
       <ul>
-        <li>不要把 <code>auth.json</code> 發到公開聊天、Issue、論壇或別人控制的伺服器。</li>
+        <li>不要把登入檔（<code>auth.json</code> / <code>credentials.json</code>）發到公開聊天、Issue、論壇或別人控制的伺服器。</li>
         <li><code>APP_SECRET</code> 必須長期保持不變；改掉後舊憑據無法解密。</li>
-        <li>不再信任某台伺服器時，請重新登入或輪換 Codex 登入，讓舊憑據失效。</li>
+        <li>不再信任某台伺服器時，請重新登入或輪換對應帳號的登入，讓舊憑據失效。</li>
       </ul>
     `,
   },
@@ -183,10 +185,10 @@ const translations = {
     barkSaved: "Bark settings saved",
     barkTestSent: "Test notification sent",
     barkTestFailed: "Send failed: ",
-    guideTitle: "How to get auth.json",
+    guideTitle: "How to get login files",
     guideOne: "Find your local Codex login file: <code>${CODEX_HOME:-$HOME/.codex}/auth.json</code>",
     guideTwo: "Upload it here. Credentials are encrypted at rest and only decrypted temporarily while refreshing limits.",
-    guideThree: "For public deployments, use a strong password and rotate the Codex login if you no longer trust the server.",
+    guideThree: "For public deployments, use a strong password and rotate the corresponding login if you no longer trust the server.",
     accounts: "Accounts",
     healthy: "Healthy",
     updated: "Updated",
@@ -197,6 +199,7 @@ const translations = {
     updatedIn: "updated in",
     resetUnavailable: "reset time unavailable",
     resets: "resets",
+    resetsIn: "in",
     left: "left",
     used: "used",
     limit: "Limit",
@@ -204,7 +207,7 @@ const translations = {
     weekly: "Weekly limit",
     authRequired: "Please login first",
     importDone: "Account imported",
-    deleteConfirm: "Delete \"{name}\"? This does not affect Codex / ChatGPT itself.",
+    deleteConfirm: "Delete \"{name}\"? This does not affect Codex / Claude itself.",
     beginnerGuideTitle: "Beginner guide",
     beginnerGuideBody: `
       <h3>What this page does</h3>
@@ -212,15 +215,15 @@ const translations = {
       <h3>First-time setup</h3>
       <ol>
         <li>Create a local QuotaDeck account. For public deployments, create your own account first, then set <code>ALLOW_REGISTRATION</code> to <code>0</code> on the server and restart the container.</li>
-        <li>Make sure Codex CLI is logged in on your own computer. The login file is usually <code>\${CODEX_HOME:-$HOME/.codex}/auth.json</code>.</li>
-        <li>Enter a recognizable account name, choose <code>auth.json</code>, and import it. The server stores only encrypted credentials.</li>
+        <li>Make sure the tool you want to monitor is logged in: the Codex login file is usually <code>\${CODEX_HOME:-$HOME/.codex}/auth.json</code>, and Claude Code uses <code>~/.claude/.credentials.json</code>.</li>
+        <li>Pick the provider (Codex or Claude) in the import form, enter a recognizable account name, choose the matching login file, and import it. The server stores only encrypted credentials.</li>
         <li>Use the top refresh button for all accounts, or the small refresh button on one account to refresh only that account.</li>
       </ol>
       <h3>Security notes</h3>
       <ul>
-        <li>Do not post <code>auth.json</code> in public chats, issues, forums, or servers you do not control.</li>
+        <li>Do not post login files (<code>auth.json</code> / <code>credentials.json</code>) in public chats, issues, forums, or servers you do not control.</li>
         <li>Keep <code>APP_SECRET</code> stable. Changing it makes old encrypted credentials unreadable.</li>
-        <li>If you stop trusting a server, log in again or rotate your Codex login so the old credential becomes invalid.</li>
+        <li>If you stop trusting a server, log in again or rotate the corresponding login so the old credential becomes invalid.</li>
       </ul>
     `,
   },
@@ -258,10 +261,10 @@ const translations = {
     barkSaved: "Bark 設定を保存しました",
     barkTestSent: "テスト通知を送信しました",
     barkTestFailed: "送信失敗：",
-    guideTitle: "auth.json の取得方法",
+    guideTitle: "ログインファイルの取得方法",
     guideOne: "ローカルの Codex ログインファイルを探します: <code>${CODEX_HOME:-$HOME/.codex}/auth.json</code>",
     guideTwo: "ここにアップロードします。認証情報は保存時に暗号化され、制限更新時だけ一時的に復号されます。",
-    guideThree: "公開運用では強いパスワードを使い、サーバーを信頼しなくなった場合は Codex ログインをローテーションしてください。",
+    guideThree: "公開運用では強いパスワードを使い、サーバーを信頼しなくなった場合は対応するアカウントのログインをローテーションしてください。",
     accounts: "アカウント",
     healthy: "正常",
     updated: "更新",
@@ -272,6 +275,7 @@ const translations = {
     updatedIn: "更新時間",
     resetUnavailable: "リセット時刻なし",
     resets: "リセット",
+    resetsIn: "あと",
     left: "残り",
     used: "使用済み",
     limit: "制限",
@@ -279,7 +283,7 @@ const translations = {
     weekly: "週間制限",
     authRequired: "先にログインしてください",
     importDone: "アカウントをインポートしました",
-    deleteConfirm: "「{name}」を削除しますか？Codex / ChatGPT 自体には影響しません。",
+    deleteConfirm: "「{name}」を削除しますか？Codex / Claude 自体には影響しません。",
     beginnerGuideTitle: "初心者向けガイド",
     beginnerGuideBody: `
       <h3>このページでできること</h3>
@@ -287,15 +291,15 @@ const translations = {
       <h3>初回利用</h3>
       <ol>
         <li>まず QuotaDeck のローカルアカウントを作成します。公開運用では、自分のアカウントを作成した後、サーバー側で <code>ALLOW_REGISTRATION</code> を <code>0</code> に変更してコンテナを再起動してください。</li>
-        <li>自分の PC で Codex CLI にログイン済みであることを確認します。ログインファイルは通常 <code>\${CODEX_HOME:-$HOME/.codex}/auth.json</code> にあります。</li>
-        <li>分かりやすいアカウント名を入力し、<code>auth.json</code> を選択してインポートします。サーバーには暗号化された認証情報だけが保存されます。</li>
+        <li>監視したいツールがログイン済みであることを確認します。Codex のログインファイルは通常 <code>\${CODEX_HOME:-$HOME/.codex}/auth.json</code>、Claude Code は <code>~/.claude/.credentials.json</code> です。</li>
+        <li>インポートフォームでプロバイダー（Codex または Claude）を選び、分かりやすいアカウント名を入力し、対応するログインファイルを選択してインポートします。サーバーには暗号化された認証情報だけが保存されます。</li>
         <li>上部の更新ボタンで全アカウントを更新できます。各アカウント右側の小さい更新ボタンでは、そのアカウントだけを更新できます。</li>
       </ol>
       <h3>セキュリティ注意</h3>
       <ul>
-        <li><code>auth.json</code> を公開チャット、Issue、フォーラム、自分が管理していないサーバーに投稿しないでください。</li>
+        <li>ログインファイル（<code>auth.json</code> / <code>credentials.json</code>）を公開チャット、Issue、フォーラム、自分が管理していないサーバーに投稿しないでください。</li>
         <li><code>APP_SECRET</code> は維持してください。変更すると既存の暗号化済み認証情報を復号できなくなります。</li>
-        <li>サーバーを信頼しなくなった場合は、Codex に再ログインするかログイン情報をローテーションして、古い認証情報を無効化してください。</li>
+        <li>サーバーを信頼しなくなった場合は、対応するアカウントに再ログインするかログイン情報をローテーションして、古い認証情報を無効化してください。</li>
       </ul>
     `,
   },
@@ -397,9 +401,24 @@ function formatTime(value) {
   }).format(new Date(value));
 }
 
+function formatRelativeReset(unixSeconds) {
+  const diffMs = unixSeconds * 1000 - Date.now();
+  if (diffMs <= 0) return null;
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m`;
+  return "<1m";
+}
+
 function formatReset(unixSeconds) {
   if (!unixSeconds) return t("resetUnavailable");
-  return `${t("resets")} ${formatTime(new Date(unixSeconds * 1000))}`;
+  const at = `${t("resets")} ${formatTime(new Date(unixSeconds * 1000))}`;
+  const remaining = formatRelativeReset(unixSeconds);
+  return remaining ? `${at} · ${t("resetsIn")} ${remaining}` : at;
 }
 
 function limitLabel(window) {

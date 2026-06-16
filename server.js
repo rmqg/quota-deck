@@ -243,7 +243,7 @@ function withAccountsLock(task) {
   return run;
 }
 
-function persistAccountAuth(accountId, userId, auth) {
+function persistAccountAuth(accountId, userId, auth, email) {
   return withAccountsLock(async () => {
     const accounts = await loadAccounts();
     const account = accounts.find((item) => item.id === accountId && item.userId === userId);
@@ -251,6 +251,9 @@ function persistAccountAuth(accountId, userId, auth) {
       return;
     }
     account.encryptedAuth = encryptJson(auth);
+    if (email && !account.email) {
+      account.email = email;
+    }
     await saveAccounts(accounts);
   });
 }
@@ -616,14 +619,25 @@ async function createAccountFromClaude(user, input) {
     throw new Error("Account name is required");
   }
 
+  // Refresh once on import to validate the credentials and capture the account
+  // email (only the token endpoint returns it), then store the rotated tokens.
+  let stored = credentials;
+  let email = normalizeEmail(input.email);
+  try {
+    stored = await refreshClaudeToken(credentials);
+    email = email || normalizeEmail(stored.email);
+  } catch {
+    // Keep the uploaded credentials; email stays unknown until a later refresh.
+  }
+
   const account = {
     id: randomUUID(),
     userId: user.id,
     provider: "claude",
     name,
-    email: normalizeEmail(input.email),
+    email: email || null,
     identity: null,
-    encryptedAuth: encryptJson(credentials),
+    encryptedAuth: encryptJson(stored),
     createdAt: new Date().toISOString(),
   };
   const accounts = await loadAccounts();
@@ -669,6 +683,7 @@ async function refreshClaudeToken(credentials) {
     accessToken: body.access_token,
     refreshToken: body.refresh_token || credentials.refreshToken,
     expiresAt: body.expires_in ? Date.now() + Number(body.expires_in) * 1000 : 0,
+    email: normalizeEmail(body.account?.email_address) || credentials.email || null,
   };
 }
 
@@ -679,7 +694,10 @@ async function ensureClaudeAccessToken(account) {
   }
   const refreshed = await refreshClaudeToken(credentials);
   account.encryptedAuth = encryptJson(refreshed);
-  await persistAccountAuth(account.id, account.userId, refreshed);
+  if (refreshed.email && !account.email) {
+    account.email = refreshed.email;
+  }
+  await persistAccountAuth(account.id, account.userId, refreshed, refreshed.email);
   return refreshed;
 }
 
