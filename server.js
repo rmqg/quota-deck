@@ -842,7 +842,14 @@ function windowRemaining(window) {
 async function evaluateBark(user, account, result) {
   const bark = publicBark(user);
   const previous = account.barkState || {};
-  const nextState = { error: !result.ok };
+  // Carry quota levels forward so a failed refresh does not reset them and
+  // re-trigger an "exhausted" alert on the next successful read. A level only
+  // changes (and re-notifies) when a successful read reports a new state.
+  const nextState = {
+    error: !result.ok,
+    fiveHour: previous.fiveHour || "ok",
+    weekly: previous.weekly || "ok",
+  };
   const messages = [];
 
   if (!result.ok) {
