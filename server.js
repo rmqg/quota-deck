@@ -687,18 +687,60 @@ async function refreshClaudeToken(credentials) {
   };
 }
 
-async function ensureClaudeAccessToken(account) {
-  const credentials = decryptJson(account.encryptedAuth);
+// Claude uses rotating refresh tokens: each refresh consumes the current
+// refresh token and invalidates it. Multiple concurrent callers (background
+// tick, /api/limits, manual refresh) each load their own account copy, so
+// without coordination two refreshes can race on the same token — one wins,
+// the loser persists a now-invalid chain and the account loses its auth.
+// Serialize per account and always read the freshest persisted credentials.
+const claudeRefreshInFlight = new Map();
+
+function syncAccountFromCredentials(account, credentials) {
+  account.encryptedAuth = encryptJson(credentials);
+  if (credentials.email && !account.email) {
+    account.email = credentials.email;
+  }
+}
+
+async function loadAccountAuth(accountId, userId) {
+  const accounts = await loadAccounts();
+  const account = accounts.find((item) => item.id === accountId && item.userId === userId);
+  return account ? account.encryptedAuth : null;
+}
+
+async function resolveClaudeCredentials(account) {
+  // Re-read the latest persisted token in case another worker already rotated
+  // it while this account object was sitting stale.
+  const encrypted = (await loadAccountAuth(account.id, account.userId)) || account.encryptedAuth;
+  const credentials = decryptJson(encrypted);
   if (credentials.expiresAt && credentials.expiresAt > Date.now() + 60_000) {
     return credentials;
   }
   const refreshed = await refreshClaudeToken(credentials);
-  account.encryptedAuth = encryptJson(refreshed);
-  if (refreshed.email && !account.email) {
-    account.email = refreshed.email;
-  }
   await persistAccountAuth(account.id, account.userId, refreshed, refreshed.email);
   return refreshed;
+}
+
+async function ensureClaudeAccessToken(account) {
+  const existing = claudeRefreshInFlight.get(account.id);
+  if (existing) {
+    const refreshed = await existing;
+    syncAccountFromCredentials(account, refreshed);
+    return refreshed;
+  }
+  // Register the in-flight promise synchronously (no await between get/set) so
+  // concurrent callers for the same account dedupe onto a single refresh.
+  const task = resolveClaudeCredentials(account);
+  claudeRefreshInFlight.set(account.id, task);
+  try {
+    const refreshed = await task;
+    syncAccountFromCredentials(account, refreshed);
+    return refreshed;
+  } finally {
+    if (claudeRefreshInFlight.get(account.id) === task) {
+      claudeRefreshInFlight.delete(account.id);
+    }
+  }
 }
 
 function claudeWindow(window, windowDurationMins) {
