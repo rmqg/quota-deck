@@ -184,7 +184,7 @@ Claude Code にログイン済みのマシンで：
 2. アカウント名を入力し、ローカルの `.credentials.json` を選択します。
 3. 「インポート」をクリックし、更新します。
 
-サーバーは暗号化された認証情報のみを保存します。Claude のアクセストークンは約 1 時間で失効しますが、QuotaDeck がリフレッシュトークンで自動更新し、ローテーション後の新しい認証情報を暗号化して書き戻します。
+サーバーは暗号化された認証情報のみを保存します。Claude のアクセストークンは約 1 時間で失効しますが、QuotaDeck がリフレッシュトークンで自動更新し、ローテーション後の新しい認証情報を暗号化して書き戻します。デフォルトの更新エンドポイントは現在の Claude Code が使う `https://platform.claude.com/v1/oauth/token` です。古いデプロイで `CLAUDE_OAUTH_TOKEN_URL` が廃止済みの `https://console.anthropic.com/v1/oauth/token` を指している場合、QuotaDeck は 404 のとき新しいエンドポイントへ自動的にフォールバックします。複数の代替エンドポイントを指定する場合は、カンマ区切りの `CLAUDE_OAUTH_TOKEN_URLS` を設定します。
 
 `.credentials.json` を公開チャット、Issue、フォーラム、信頼していないサーバーに送らないでください。
 

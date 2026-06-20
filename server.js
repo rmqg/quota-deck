@@ -35,7 +35,11 @@ const sessionMaxAgeSeconds = 60 * 60 * 24 * 30;
 const appSecret = process.env.APP_SECRET || "dev-secret-change-me";
 const allowRegistration = process.env.ALLOW_REGISTRATION === "1";
 const claudeUsageUrl = process.env.CLAUDE_USAGE_URL || "https://api.anthropic.com/api/oauth/usage";
-const claudeTokenUrl = process.env.CLAUDE_OAUTH_TOKEN_URL || "https://console.anthropic.com/v1/oauth/token";
+const defaultClaudeTokenUrl = "https://platform.claude.com/v1/oauth/token";
+const deprecatedClaudeTokenUrl = "https://console.anthropic.com/v1/oauth/token";
+const claudeTokenUrls = resolveClaudeTokenUrls(
+  process.env.CLAUDE_OAUTH_TOKEN_URLS || process.env.CLAUDE_OAUTH_TOKEN_URL,
+);
 const claudeClientId = process.env.CLAUDE_OAUTH_CLIENT_ID || "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 const claudeUserAgent = process.env.CLAUDE_USER_AGENT || "claude-code/2.0.0";
 const claudeBeta = process.env.CLAUDE_OAUTH_BETA || "oauth-2025-04-20";
@@ -43,6 +47,18 @@ const httpTimeoutMs = Number(process.env.HTTP_TIMEOUT_MS || 15000);
 const backgroundRefreshEnabled = process.env.BACKGROUND_REFRESH !== "0";
 const barkDefaultServer = process.env.BARK_DEFAULT_SERVER || "https://api.day.app";
 const rateBuckets = new Map();
+
+function resolveClaudeTokenUrls(configured) {
+  const urls = String(configured || defaultClaudeTokenUrl)
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const unique = [...new Set(urls)];
+  if (unique.includes(deprecatedClaudeTokenUrl) && !unique.includes(defaultClaudeTokenUrl)) {
+    unique.push(defaultClaudeTokenUrl);
+  }
+  return unique.length ? unique : [defaultClaudeTokenUrl];
+}
 
 setInterval(() => {
   const now = Date.now();
@@ -657,34 +673,43 @@ async function fetchWithTimeout(url, options = {}) {
 }
 
 async function refreshClaudeToken(credentials) {
-  const response = await fetchWithTimeout(claudeTokenUrl, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "user-agent": claudeUserAgent,
-      "anthropic-beta": claudeBeta,
-    },
-    body: JSON.stringify({
-      grant_type: "refresh_token",
-      refresh_token: credentials.refreshToken,
-      client_id: claudeClientId,
-    }),
-  });
-  if (!response.ok) {
-    const detail = (await response.text().catch(() => "")).slice(0, 200);
-    throw new Error(`Claude token refresh failed (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
+  let lastError = null;
+  for (let index = 0; index < claudeTokenUrls.length; index += 1) {
+    const tokenUrl = claudeTokenUrls[index];
+    const response = await fetchWithTimeout(tokenUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "user-agent": claudeUserAgent,
+        "anthropic-beta": claudeBeta,
+      },
+      body: JSON.stringify({
+        grant_type: "refresh_token",
+        refresh_token: credentials.refreshToken,
+        client_id: claudeClientId,
+      }),
+    });
+    if (!response.ok) {
+      const detail = (await response.text().catch(() => "")).slice(0, 200);
+      lastError = new Error(`Claude token refresh failed (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
+      if (response.status === 404 && index < claudeTokenUrls.length - 1) {
+        continue;
+      }
+      throw lastError;
+    }
+    const body = await response.json();
+    if (!body.access_token) {
+      throw new Error("Claude token refresh returned no access_token");
+    }
+    return {
+      ...credentials,
+      accessToken: body.access_token,
+      refreshToken: body.refresh_token || credentials.refreshToken,
+      expiresAt: body.expires_in ? Date.now() + Number(body.expires_in) * 1000 : 0,
+      email: normalizeEmail(body.account?.email_address) || credentials.email || null,
+    };
   }
-  const body = await response.json();
-  if (!body.access_token) {
-    throw new Error("Claude token refresh returned no access_token");
-  }
-  return {
-    ...credentials,
-    accessToken: body.access_token,
-    refreshToken: body.refresh_token || credentials.refreshToken,
-    expiresAt: body.expires_in ? Date.now() + Number(body.expires_in) * 1000 : 0,
-    email: normalizeEmail(body.account?.email_address) || credentials.email || null,
-  };
+  throw lastError || new Error("Claude token refresh failed: no token endpoints configured");
 }
 
 // Claude uses rotating refresh tokens: each refresh consumes the current

@@ -184,7 +184,7 @@ Import steps:
 2. Enter an account name, select your local `.credentials.json`.
 3. Click "Import", then refresh.
 
-The server stores only the encrypted credentials. Claude access tokens expire after roughly an hour; QuotaDeck refreshes them automatically using the refresh token and writes the rotated credentials back encrypted.
+The server stores only the encrypted credentials. Claude access tokens expire after roughly an hour; QuotaDeck refreshes them automatically using the refresh token and writes the rotated credentials back encrypted. The default refresh endpoint is the one current Claude Code uses, `https://platform.claude.com/v1/oauth/token`; if an older deployment still points `CLAUDE_OAUTH_TOKEN_URL` at the deprecated `https://console.anthropic.com/v1/oauth/token`, QuotaDeck falls back to the new endpoint on 404. To configure multiple fallback endpoints, set comma-separated `CLAUDE_OAUTH_TOKEN_URLS`.
 
 Do not send `.credentials.json` to public chats, issues, forums, or servers you do not trust.
 

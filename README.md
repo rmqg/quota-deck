@@ -184,7 +184,7 @@ ls -l "${CODEX_HOME:-$HOME/.codex}/auth.json"
 2. 填写账号名称，选择本机的 `.credentials.json`。
 3. 点击“导入”，再点刷新。
 
-服务器只保存加密后的凭据。Claude 的 access token 约 1 小时过期，QuotaDeck 会用 refresh token 自动刷新，并把轮换后的新凭据重新加密写回。
+服务器只保存加密后的凭据。Claude 的 access token 约 1 小时过期，QuotaDeck 会用 refresh token 自动刷新，并把轮换后的新凭据重新加密写回。默认刷新端点是 Claude Code 当前使用的 `https://platform.claude.com/v1/oauth/token`；如果历史部署仍把 `CLAUDE_OAUTH_TOKEN_URL` 指向已废弃的 `https://console.anthropic.com/v1/oauth/token`，QuotaDeck 会在 404 时自动改用新端点。需要自定义多个备用端点时，可用逗号分隔的 `CLAUDE_OAUTH_TOKEN_URLS`。
 
 不要把 `.credentials.json` 发到公开聊天、Issue、论坛，或上传到不信任的服务器。
 
