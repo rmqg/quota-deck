@@ -410,6 +410,38 @@ async function requireUser(req, res) {
   return user;
 }
 
+function readBearerToken(req) {
+  const header = req.headers.authorization || "";
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  if (match) {
+    return match[1].trim();
+  }
+  const apiKey = req.headers["x-api-key"];
+  return apiKey ? String(apiKey).trim() : "";
+}
+
+// Read-only API token for headless clients (e.g. the tmux status bar). The
+// token maps to a single configured user and is only honoured for GET requests;
+// all mutations stay cookie-only.
+async function getApiTokenUser(req) {
+  const configured = process.env.READ_API_TOKEN || "";
+  const username = normalizeUsername(process.env.READ_API_USERNAME || "");
+  if (!configured || !username) {
+    return null;
+  }
+  const provided = readBearerToken(req);
+  if (!provided) {
+    return null;
+  }
+  const a = Buffer.from(provided);
+  const b = Buffer.from(configured);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return null;
+  }
+  const users = await loadUsers();
+  return users.find((user) => user.username === username) || null;
+}
+
 async function readBody(req) {
   const chunks = [];
   let size = 0;
@@ -1075,8 +1107,21 @@ async function handleApi(req, res, url) {
     return;
   }
 
-  const user = await requireUser(req, res);
+  let user = await getCurrentUser(req);
+  let viaToken = false;
   if (!user) {
+    const tokenUser = await getApiTokenUser(req);
+    if (tokenUser) {
+      user = tokenUser;
+      viaToken = true;
+    }
+  }
+  if (!user) {
+    json(res, 401, { error: "Authentication required" });
+    return;
+  }
+  if (viaToken && req.method !== "GET") {
+    json(res, 403, { error: "Read-only API token" });
     return;
   }
 

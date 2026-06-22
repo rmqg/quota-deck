@@ -215,6 +215,31 @@ QuotaDeck 支援透過 [Bark](https://github.com/Finb/Bark)（iOS 推播 App）�
 
 Bark 推播會把帳號名稱和額度狀態傳送到你配置的 Bark 伺服器，請確認信任該伺服器。
 
+## 唯讀 API 介面（無頭用戶端）
+
+無頭用戶端（如 tmux 狀態列、指令稿）可以用唯讀 API token 直接拉取額度快照，免登入、免 cookie。
+
+在 `.env` 裡設定：
+
+```bash
+READ_API_TOKEN=$(openssl rand -base64 32)   # 一長串隨機密鑰
+READ_API_USERNAME=your-username             # token 對應的使用者名稱
+```
+
+之後用 `Authorization: Bearer <token>` 或 `X-API-Key: <token>` 請求：
+
+```bash
+curl -H "Authorization: Bearer $READ_API_TOKEN" https://your-domain/api/limits
+```
+
+回傳的就是後台保存的最新快照（`{ "results": [...] }`，結構同網頁用的介面）。
+
+安全說明：
+
+- token **僅對 GET 生效**（`/api/limits`、`/api/accounts` 等唯讀介面），任何寫入操作（匯入、重新整理、改設定）都會回傳 403，cookie 登入不受影響。
+- token 等同於該使用者額度資料的唯讀權限，請妥善保管；外洩後改掉 `READ_API_TOKEN` 即失效。
+- 留空 `READ_API_TOKEN` 或 `READ_API_USERNAME` 即關閉該功能。
+
 ## 頁面怎麼用
 
 頁面在桌面和手機端都使用緊湊佈局，方便同時查看更多帳號和額度條。

@@ -215,6 +215,31 @@ QuotaDeck は [Bark](https://github.com/Finb/Bark)（iOS プッシュ通知ア�
 
 Bark 通知はアカウント名と残量状態を設定した Bark サーバーへ送信します。信頼できるサーバーかどうか確認してください。
 
+## 読み取り専用 API（ヘッドレスクライアント）
+
+ヘッドレスクライアント（tmux ステータスバー、スクリプトなど）は、読み取り専用 API トークンで残量スナップショットを直接取得できます。ログイン不要・cookie 不要です。
+
+`.env` に設定します：
+
+```bash
+READ_API_TOKEN=$(openssl rand -base64 32)   # 長いランダムな秘密鍵
+READ_API_USERNAME=your-username             # トークンが対応するユーザー名
+```
+
+`Authorization: Bearer <token>` または `X-API-Key: <token>` で送信します：
+
+```bash
+curl -H "Authorization: Bearer $READ_API_TOKEN" https://your-domain/api/limits
+```
+
+応答はバックエンドが保存した最新スナップショット（`{ "results": [...] }`、Web UI と同じ構造）です。
+
+セキュリティ上の注意：
+
+- トークンは **GET のみ有効**（`/api/limits`、`/api/accounts` など読み取り専用）。書き込み操作（インポート・更新・設定変更）はすべて 403 を返します。cookie ログインには影響しません。
+- トークンはそのユーザーの残量データへの読み取り専用アクセス権を持ちます。安全に保管し、漏えい時は `READ_API_TOKEN` を変更して失効させてください。
+- `READ_API_TOKEN` または `READ_API_USERNAME` を空にすると無効になります。
+
 ## ページの使い方
 
 ページはデスクトップとモバイルの両方でコンパクトなレイアウトを使い、より多くのアカウントと制限バーを同時に表示できます。

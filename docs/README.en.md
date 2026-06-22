@@ -215,6 +215,31 @@ After saving, use "Send test" to verify. The server refreshes all accounts every
 
 Bark pushes send the account name and quota status to your configured Bark server — make sure you trust it.
 
+## Read-Only API (Headless Clients)
+
+Headless clients (a tmux status bar, scripts, etc.) can fetch the quota snapshot with a read-only API token — no login, no cookie.
+
+Set in `.env`:
+
+```bash
+READ_API_TOKEN=$(openssl rand -base64 32)   # a long random secret
+READ_API_USERNAME=your-username             # the user the token maps to
+```
+
+Then send `Authorization: Bearer <token>` or `X-API-Key: <token>`:
+
+```bash
+curl -H "Authorization: Bearer $READ_API_TOKEN" https://your-domain/api/limits
+```
+
+The response is the latest backend snapshot (`{ "results": [...] }`, same shape the web UI uses).
+
+Security notes:
+
+- The token is honoured **for GET only** (`/api/limits`, `/api/accounts`, …); any write (import, refresh, settings) returns 403. Cookie login is unaffected.
+- The token grants read-only access to that user's quota data — keep it safe; rotate `READ_API_TOKEN` to revoke.
+- Leave `READ_API_TOKEN` or `READ_API_USERNAME` empty to disable the feature.
+
 ## How To Use The Page
 
 The page uses a compact layout on desktop and mobile so more accounts and limit bars fit on screen.
