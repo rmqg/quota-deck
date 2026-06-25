@@ -326,7 +326,6 @@ const credentialLabel = document.querySelector("#credentialLabel");
 const barkForm = document.querySelector("#barkForm");
 const barkTestButton = document.querySelector("#barkTest");
 const barkMessage = document.querySelector("#barkMessage");
-const refreshIntervalMs = 30_000;
 
 let lang = localStorage.getItem("quotaDeckLang") || navigator.language || "en";
 lang = translations[lang] ? lang : lang.startsWith("zh-TW") || lang.startsWith("zh-HK") ? "zh-Hant" : lang.startsWith("zh") ? "zh-Hans" : lang.startsWith("ja") ? "ja" : "en";
@@ -336,6 +335,7 @@ let accounts = [];
 let results = new Map();
 let requestNonce = 0;
 let refreshAllInFlight = null;
+let limitEvents = null;
 const refreshingAccountIds = new Set();
 
 function t(key) {
@@ -613,6 +613,34 @@ async function loadLimits() {
   render();
 }
 
+function closeLimitEvents() {
+  if (!limitEvents) return;
+  limitEvents.close();
+  limitEvents = null;
+}
+
+function connectLimitEvents() {
+  if (!currentUser || limitEvents || !window.EventSource) return;
+  limitEvents = new EventSource("/api/limits/events");
+  limitEvents.addEventListener("limits", (event) => {
+    try {
+      applyRefreshResults(JSON.parse(event.data));
+      render();
+    } catch (error) {
+      console.error(error);
+    }
+  });
+  limitEvents.addEventListener("limits-error", (event) => {
+    if (event.data) {
+      try {
+        console.error(JSON.parse(event.data).error);
+      } catch {
+        console.error(event.data);
+      }
+    }
+  });
+}
+
 function refreshAll() {
   if (!currentUser) return Promise.resolve();
   if (refreshAllInFlight) return refreshAllInFlight;
@@ -687,6 +715,7 @@ async function submitAuthForm(form, endpoint) {
   await loadAccounts();
   await loadBark();
   await loadLimits();
+  connectLimitEvents();
 }
 
 loginForm.addEventListener("submit", async (event) => {
@@ -818,6 +847,7 @@ logoutButton.addEventListener("click", async () => {
   currentUser = null;
   accounts = [];
   results = new Map();
+  closeLimitEvents();
   render();
 });
 
@@ -836,10 +866,8 @@ try {
   await loadAccounts();
   await loadBark();
   await loadLimits();
+  connectLimitEvents();
 } catch (error) {
   console.error(error);
   authMessage.textContent = error.message;
 }
-window.setInterval(() => {
-  loadLimits().catch(console.error);
-}, refreshIntervalMs);

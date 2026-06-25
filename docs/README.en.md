@@ -211,7 +211,7 @@ Each user configures their own settings under "Bark notifications":
 - Low-quota threshold (remaining percent, default 20%).
 - Notify on: low quota / exhausted / recovered / refresh failure (each can be toggled).
 
-After saving, use "Send test" to verify. The server refreshes all accounts every minute (on the minute), stores the latest usage, and pushes Bark on state changes, so you get alerts even with no browser open. The page shows this backend snapshot; set `BACKGROUND_REFRESH=0` to disable the background refresh.
+After saving, use "Send test" to verify. The server refreshes all accounts every minute (on the minute), stores the latest usage, and pushes Bark on state changes, so you get alerts even with no browser open. Open pages receive the refreshed backend snapshot through server-sent events instead of fixed-interval polling; set `BACKGROUND_REFRESH=0` to disable the background refresh.
 
 Bark pushes send the account name and quota status to your configured Bark server — make sure you trust it.
 

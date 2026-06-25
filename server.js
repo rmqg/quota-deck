@@ -1024,10 +1024,103 @@ async function evaluateBark(user, account, result) {
 // Latest usage snapshot per account, kept fresh by the background refresh so
 // browsers can display the most recent data without each one hitting upstream.
 const latestResults = new Map();
+const limitEventClients = new Map();
 
-async function refreshAndStore(account) {
+function writeEvent(res, event, data) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data).replace(/\n/g, "\\n")}\n\n`);
+}
+
+function publicLimitSnapshot(accounts) {
+  return accounts.map((account) => latestResults.get(account.id)).filter(Boolean);
+}
+
+async function currentLimitSnapshot(userId, { hydrateMissing = false, publishHydrated = false } = {}) {
+  const accounts = (await loadAccounts()).filter((account) => account.userId === userId);
+  if (hydrateMissing) {
+    const missing = accounts.filter((account) => !latestResults.has(account.id));
+    if (missing.length) {
+      await Promise.all(missing.map((account) => refreshAndStore(account, { publish: false })));
+      if (publishHydrated) {
+        publishLimitSnapshot(userId).catch((error) => {
+          console.error("Limit event publish error:", error.message);
+        });
+      }
+    }
+  }
+  return { accounts, results: publicLimitSnapshot(accounts) };
+}
+
+async function publishLimitSnapshot(userId) {
+  const clients = limitEventClients.get(userId);
+  if (!clients?.size) {
+    return;
+  }
+  try {
+    const { results } = await currentLimitSnapshot(userId);
+    for (const client of [...clients]) {
+      writeEvent(client.res, "limits", { results });
+    }
+  } catch (error) {
+    for (const client of [...clients]) {
+      writeEvent(client.res, "limits-error", { error: error.message || "Failed to publish limits" });
+    }
+  }
+}
+
+async function subscribeLimitEvents(req, res, user) {
+  req.socket.setTimeout(0);
+  res.writeHead(200, {
+    "content-type": "text/event-stream; charset=utf-8",
+    "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0",
+    "cdn-cache-control": "no-store",
+    "cloudflare-cdn-cache-control": "no-store",
+    pragma: "no-cache",
+    expires: "0",
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "same-origin",
+    "x-accel-buffering": "no",
+    connection: "keep-alive",
+  });
+
+  const client = {
+    res,
+    heartbeat: setInterval(() => {
+      res.write(": keep-alive\n\n");
+    }, 25_000),
+  };
+  client.heartbeat.unref();
+
+  if (!limitEventClients.has(user.id)) {
+    limitEventClients.set(user.id, new Set());
+  }
+  limitEventClients.get(user.id).add(client);
+
+  const close = () => {
+    clearInterval(client.heartbeat);
+    const clients = limitEventClients.get(user.id);
+    if (clients) {
+      clients.delete(client);
+      if (!clients.size) {
+        limitEventClients.delete(user.id);
+      }
+    }
+  };
+  req.on("close", close);
+  res.on("error", close);
+
+  const { results } = await currentLimitSnapshot(user.id);
+  writeEvent(res, "limits", { results });
+}
+
+async function refreshAndStore(account, { publish = true } = {}) {
   const result = await refreshAccount(account);
   latestResults.set(account.id, result);
+  if (publish) {
+    publishLimitSnapshot(account.userId).catch((error) => {
+      console.error("Limit event publish error:", error.message);
+    });
+  }
   return result;
 }
 
@@ -1131,6 +1224,11 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (url.pathname === "/api/limits/events" && req.method === "GET") {
+    await subscribeLimitEvents(req, res, user);
+    return;
+  }
+
   if (url.pathname === "/api/accounts/import-auth" && req.method === "POST") {
     if (!checkRate(req, res, "import-auth", 20, 60 * 60 * 1000)) return;
     const body = await readBody(req);
@@ -1210,12 +1308,10 @@ async function handleApi(req, res, url) {
   if (url.pathname === "/api/limits" && req.method === "GET") {
     // Serve the background snapshot; lazily fetch any account not yet cached
     // (e.g. just imported, or right after a cold start).
-    const accounts = (await loadAccounts()).filter((account) => account.userId === user.id);
-    const missing = accounts.filter((account) => !latestResults.has(account.id));
-    if (missing.length) {
-      await Promise.all(missing.map(refreshAndStore));
-    }
-    const results = accounts.map((account) => latestResults.get(account.id)).filter(Boolean);
+    const { results } = await currentLimitSnapshot(user.id, {
+      hydrateMissing: true,
+      publishHydrated: true,
+    });
     json(res, 200, { results });
     return;
   }
