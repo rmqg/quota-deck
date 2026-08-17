@@ -31,6 +31,7 @@ const accountsFile = path.join(dataDir, "accounts.json");
 const sessionsFile = path.join(dataDir, "sessions.json");
 const port = Number(process.env.PORT || 8787);
 const refreshTimeoutMs = Number(process.env.REFRESH_TIMEOUT_MS || 25000);
+const weeklyWindowDurationMins = 7 * 24 * 60;
 const sessionMaxAgeSeconds = 60 * 60 * 24 * 30;
 const appSecret = process.env.APP_SECRET || "dev-secret-change-me";
 const allowRegistration = process.env.ALLOW_REGISTRATION === "1";
@@ -485,6 +486,11 @@ function decodeJwtPayload(token) {
   }
 }
 
+function codexAccessTokenExpired(auth, now = Date.now()) {
+  const expiresAtSeconds = Number(decodeJwtPayload(auth?.tokens?.access_token).exp);
+  return Number.isFinite(expiresAtSeconds) && expiresAtSeconds * 1000 <= now;
+}
+
 function normalizeEmail(value) {
   const email = String(value || "").trim();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
@@ -526,10 +532,13 @@ async function createAccountFromAuth(user, input) {
 }
 
 async function withTemporaryCodexHome(account, callback) {
+  const auth = decryptJson(account.encryptedAuth);
+  if (codexAccessTokenExpired(auth)) {
+    throw new Error("Codex access token expired; re-import a fresh auth.json.");
+  }
   const tmpRoot = await mkdtemp(path.join(os.tmpdir(), "quota-deck-codex-"));
   try {
     await chmod(tmpRoot, 0o700);
-    const auth = decryptJson(account.encryptedAuth);
     await writeFile(path.join(tmpRoot, "auth.json"), `${JSON.stringify(auth)}\n`, { mode: 0o600 });
     return await callback(tmpRoot);
   } finally {
@@ -607,6 +616,7 @@ function requestCodexRateLimits(codexHome) {
         }
 
         if (message.id === "init") {
+          send({ method: "initialized", params: {} });
           send({ id: "limits", method: "account/rateLimits/read", params: null });
           continue;
         }
@@ -621,8 +631,8 @@ function requestCodexRateLimits(codexHome) {
     });
 
     child.on("exit", (code) => {
-      if (!settled && code !== 0) {
-        finish(new Error(stderr.trim() || `codex app-server exited with status ${code}`));
+      if (!settled) {
+        finish(new Error(stderr.trim() || `codex app-server exited before returning limits (status ${code})`));
       }
     });
 
@@ -630,7 +640,7 @@ function requestCodexRateLimits(codexHome) {
       id: "init",
       method: "initialize",
       params: {
-        clientInfo: { name: "quota-deck", version: "0.2.0" },
+        clientInfo: { name: "quota-deck", version: "0.1.1" },
         capabilities: { experimentalApi: true },
       },
     });
@@ -857,6 +867,44 @@ function selectedSnapshot(result) {
   );
 }
 
+function rateLimitWindowDurationMins(window) {
+  const value = Number(
+    window?.windowDurationMins ??
+    window?.window_duration_mins ??
+    window?.windowMinutes ??
+    window?.window_minutes,
+  );
+  return Number.isFinite(value) ? value : null;
+}
+
+function weeklyQuotaWindow(snapshot) {
+  for (const window of [snapshot?.weekly, snapshot?.week]) {
+    if (window && typeof window === "object") {
+      return window;
+    }
+  }
+  for (const window of [snapshot?.primary, snapshot?.secondary]) {
+    if (window && typeof window === "object" && rateLimitWindowDurationMins(window) === weeklyWindowDurationMins) {
+      return window;
+    }
+  }
+  return null;
+}
+
+function weeklyOnlyCodexSnapshot(result) {
+  const snapshot = selectedSnapshot(result);
+  const weekly = weeklyQuotaWindow(snapshot);
+  if (!weekly) {
+    throw new Error("Codex did not return a weekly quota window.");
+  }
+  return {
+    ...snapshot,
+    weekly,
+    primary: weekly,
+    secondary: null,
+  };
+}
+
 async function refreshAccount(account) {
   const startedAt = Date.now();
   try {
@@ -866,8 +914,8 @@ async function refreshAccount(account) {
       rateLimits = await requestClaudeUsage(account);
     } else {
       const result = await withTemporaryCodexHome(account, requestCodexRateLimits);
-      rateLimits = result.rateLimits;
-      rateLimitsByLimitId = result.rateLimitsByLimitId || null;
+      rateLimits = weeklyOnlyCodexSnapshot(result);
+      rateLimitsByLimitId = { codex: rateLimits };
     }
     return {
       account: publicAccount(account),
@@ -964,9 +1012,11 @@ async function evaluateBark(user, account, result) {
   // changes (and re-notifies) when a successful read reports a new state.
   const nextState = {
     error: !result.ok,
-    fiveHour: previous.fiveHour || "ok",
     weekly: previous.weekly || "ok",
   };
+  if (account.provider === "claude") {
+    nextState.fiveHour = previous.fiveHour || "ok";
+  }
   const messages = [];
 
   if (!result.ok) {
@@ -978,10 +1028,12 @@ async function evaluateBark(user, account, result) {
     }
   } else {
     const snapshot = selectedSnapshot(result);
-    const windows = [
-      ["fiveHour", snapshot?.primary, "5 小时额度"],
-      ["weekly", snapshot?.secondary, "每周额度"],
-    ];
+    const windows = account.provider === "codex"
+      ? [["weekly", weeklyQuotaWindow(snapshot), "每周额度"]]
+      : [
+          ["fiveHour", snapshot?.primary, "5 小时额度"],
+          ["weekly", snapshot?.secondary, "每周额度"],
+        ];
     for (const [key, window, label] of windows) {
       const level = windowLevel(window, bark.threshold);
       nextState[key] = level;
@@ -1007,8 +1059,10 @@ async function evaluateBark(user, account, result) {
 
   const changed =
     previous.error !== nextState.error ||
-    previous.fiveHour !== nextState.fiveHour ||
-    previous.weekly !== nextState.weekly;
+    previous.weekly !== nextState.weekly ||
+    (account.provider === "claude"
+      ? previous.fiveHour !== nextState.fiveHour
+      : Object.hasOwn(previous, "fiveHour"));
   if (changed) {
     await persistBarkState(account.id, account.userId, nextState);
   }
@@ -1025,6 +1079,7 @@ async function evaluateBark(user, account, result) {
 // browsers can display the most recent data without each one hitting upstream.
 const latestResults = new Map();
 const limitEventClients = new Map();
+const accountRefreshInFlight = new Map();
 
 function writeEvent(res, event, data) {
   res.write(`event: ${event}\n`);
@@ -1114,14 +1169,36 @@ async function subscribeLimitEvents(req, res, user) {
 }
 
 async function refreshAndStore(account, { publish = true } = {}) {
-  const result = await refreshAccount(account);
-  latestResults.set(account.id, result);
+  let task = accountRefreshInFlight.get(account.id);
+  if (!task) {
+    task = (async () => {
+      const result = await refreshAccount(account);
+      latestResults.set(account.id, result);
+      return result;
+    })();
+    accountRefreshInFlight.set(account.id, task);
+  }
+
+  let result;
+  try {
+    result = await task;
+  } finally {
+    if (accountRefreshInFlight.get(account.id) === task) {
+      accountRefreshInFlight.delete(account.id);
+    }
+  }
   if (publish) {
     publishLimitSnapshot(account.userId).catch((error) => {
       console.error("Limit event publish error:", error.message);
     });
   }
   return result;
+}
+
+async function refreshUserAccounts(userId) {
+  const accounts = (await loadAccounts()).filter((account) => account.userId === userId);
+  const results = await Promise.all(accounts.map((account) => refreshAndStore(account)));
+  return { accounts, results };
 }
 
 let backgroundRefreshRunning = false;
@@ -1135,8 +1212,10 @@ async function runBackgroundRefresh() {
     const accounts = await loadAccounts();
     const users = await loadUsers();
     const usersById = new Map(users.map((user) => [user.id, user]));
-    for (const account of accounts) {
-      const result = await refreshAndStore(account);
+    const results = await Promise.all(accounts.map((account) => refreshAndStore(account)));
+    for (let index = 0; index < accounts.length; index += 1) {
+      const account = accounts[index];
+      const result = results[index];
       const user = usersById.get(account.userId);
       if (user?.bark?.enabled && user.bark?.deviceKey) {
         await evaluateBark(user, account, result);
@@ -1306,6 +1385,12 @@ async function handleApi(req, res, url) {
   }
 
   if (url.pathname === "/api/limits" && req.method === "GET") {
+    if (url.searchParams.get("refresh") === "1") {
+      if (!checkRate(req, res, "limits-live", 120, 60 * 60 * 1000)) return;
+      const { results } = await refreshUserAccounts(user.id);
+      json(res, 200, { results });
+      return;
+    }
     // Serve the background snapshot; lazily fetch any account not yet cached
     // (e.g. just imported, or right after a cold start).
     const { results } = await currentLimitSnapshot(user.id, {
@@ -1317,8 +1402,7 @@ async function handleApi(req, res, url) {
   }
 
   if (url.pathname === "/api/limits/refresh" && req.method === "POST") {
-    const accounts = (await loadAccounts()).filter((account) => account.userId === user.id);
-    const results = await Promise.all(accounts.map(refreshAndStore));
+    const { results } = await refreshUserAccounts(user.id);
     json(res, 200, { results });
     return;
   }
@@ -1404,22 +1488,31 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(port, () => {
-  const secretState = process.env.APP_SECRET ? "APP_SECRET configured" : "dev secret";
-  console.log(`QuotaDeck listening on http://127.0.0.1:${port} (${secretState})`);
-});
+if (process.env.NODE_ENV !== "test") {
+  server.listen(port, () => {
+    const secretState = process.env.APP_SECRET ? "APP_SECRET configured" : "dev secret";
+    console.log(`QuotaDeck listening on http://127.0.0.1:${port} (${secretState})`);
+  });
 
-if (backgroundRefreshEnabled) {
-  // Refresh on the minute boundary (:00) so the snapshot and reset countdowns
-  // tick predictably, then re-arm for the next minute (self-correcting drift).
-  const scheduleMinuteRefresh = () => {
-    const delay = 60_000 - (Date.now() % 60_000);
-    setTimeout(() => {
-      runBackgroundRefresh().catch((error) => console.error("Background refresh error:", error.message));
-      scheduleMinuteRefresh();
-    }, delay).unref();
-  };
-  // Populate the snapshot once at startup so the first view is not empty.
-  runBackgroundRefresh().catch((error) => console.error("Background refresh error:", error.message));
-  scheduleMinuteRefresh();
+  if (backgroundRefreshEnabled) {
+    // Refresh on the minute boundary (:00) so the snapshot and reset countdowns
+    // tick predictably, then re-arm for the next minute (self-correcting drift).
+    const scheduleMinuteRefresh = () => {
+      const delay = 60_000 - (Date.now() % 60_000);
+      setTimeout(() => {
+        runBackgroundRefresh().catch((error) => console.error("Background refresh error:", error.message));
+        scheduleMinuteRefresh();
+      }, delay).unref();
+    };
+    // Populate the snapshot once at startup so the first view is not empty.
+    runBackgroundRefresh().catch((error) => console.error("Background refresh error:", error.message));
+    scheduleMinuteRefresh();
+  }
 }
+
+export {
+  codexAccessTokenExpired,
+  rateLimitWindowDurationMins,
+  weeklyOnlyCodexSnapshot,
+  weeklyQuotaWindow,
+};

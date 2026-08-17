@@ -2,10 +2,10 @@
 
 **Languages**: [简体中文](../README.md) | [繁體中文](README.zh-Hant.md) | English | [日本語](README.ja.md)
 
-QuotaDeck is a self-hosted web dashboard for viewing the 5-hour and weekly limits of both OpenAI Codex and Anthropic Claude in one place:
+QuotaDeck is a self-hosted web dashboard for viewing OpenAI Codex and Anthropic Claude subscription limits in one place:
 
-- `5h limit`
-- `Weekly limit`
+- Codex: `Weekly limit`
+- Claude: `5h limit` and `Weekly limit`
 
 How it reads them:
 
@@ -232,7 +232,7 @@ Then send `Authorization: Bearer <token>` or `X-API-Key: <token>`:
 curl -H "Authorization: Bearer $READ_API_TOKEN" https://your-domain/api/limits
 ```
 
-The response is the latest backend snapshot (`{ "results": [...] }`, same shape the web UI uses).
+The response is the latest backend snapshot (`{ "results": [...] }`, same shape the web UI uses). The initial web load and clients such as tmux that need a live result for the current request use `GET /api/limits?refresh=1`. Accounts are queried in parallel, overlapping requests for the same account are deduplicated, and the display is updated only after the live response arrives. Live GET requests are limited to 120 per source address per hour.
 
 Security notes:
 
@@ -263,10 +263,10 @@ Status numbers:
 
 Limit bars:
 
-- `5h limit`: the `5h limit` shown in the Codex CLI TUI.
-- `Weekly limit`: the `Weekly limit` shown in the Codex CLI TUI.
+- Codex only displays the server-returned 10080-minute `Weekly limit`; it does not assume `primary` or `secondary` is a fixed window.
+- Claude displays its `5h limit` and `Weekly limit`.
 - When a limit shows `100%` remaining, the page hides the reset timestamp. Below `100%`, it shows the reset time and how long until it resets.
-- Only the `5h limit` displays `1%` used or less as `100%` remaining to match the native TUI behavior. `Weekly limit` displays Codex's returned value.
+- The Codex weekly limit displays the value returned by the current server refresh.
 
 ## Updates, Backups, And Restore
 

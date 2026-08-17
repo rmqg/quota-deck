@@ -1,7 +1,7 @@
 FROM node:22-alpine
 
 RUN apk add --no-cache ca-certificates
-RUN npm install -g @openai/codex@0.133.0
+RUN npm install -g @openai/codex@0.147.0
 
 WORKDIR /app
 

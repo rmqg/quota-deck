@@ -1,12 +1,13 @@
 {
   "name": "quota-deck",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "node --check server.js && node --check public/app.js && node --test"
   },
   "engines": {
     "node": ">=20"

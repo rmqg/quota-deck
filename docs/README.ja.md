@@ -2,10 +2,10 @@
 
 **言語**：[简体中文](../README.md) | [繁體中文](README.zh-Hant.md) | [English](README.en.md) | 日本語
 
-QuotaDeck は、OpenAI Codex と Anthropic Claude の 5 時間制限と週間制限をまとめて確認するためのセルフホスト型 Web ダッシュボードです。
+QuotaDeck は、OpenAI Codex と Anthropic Claude のサブスクリプション制限をまとめて確認するためのセルフホスト型 Web ダッシュボードです。
 
-- `5h limit`
-- `Weekly limit`
+- Codex：`Weekly limit`（週間制限）
+- Claude：`5h limit`（5 時間制限）と `Weekly limit`（週間制限）
 
 読み取り方法：
 
@@ -232,7 +232,7 @@ READ_API_USERNAME=your-username             # トークンが対応するユー�
 curl -H "Authorization: Bearer $READ_API_TOKEN" https://your-domain/api/limits
 ```
 
-応答はバックエンドが保存した最新スナップショット（`{ "results": [...] }`、Web UI と同じ構造）です。
+応答はバックエンドが保存した最新スナップショット（`{ "results": [...] }`、Web UI と同じ構造）です。Web の初回表示と、tmux など今回のオンライン結果が必要なクライアントは `GET /api/limits?refresh=1` を使用します。アカウントは並列に照会され、同じアカウントへの重複リクエストはまとめられ、ライブ応答後にだけ表示が更新されます。ライブ GET は送信元アドレスごとに 1 時間 120 回までです。
 
 セキュリティ上の注意：
 
@@ -263,10 +263,10 @@ curl -H "Authorization: Bearer $READ_API_TOKEN" https://your-domain/api/limits
 
 制限バー：
 
-- `5時間制限`：Codex CLI TUI の `5h limit`。
-- `週間制限`：Codex CLI TUI の `Weekly limit`。
+- Codex はサーバーが返す 10080 分の `週間制限` だけを表示し、`primary` または `secondary` を固定ウィンドウとはみなしません。
+- Claude は `5時間制限` と `週間制限` を表示します。
 - 制限が `100%` 残りの場合、リセット時刻は表示しません。`100%` 未満の場合はリセット時刻と、リセットまでの残り時間を表示します。
-- `5時間制限` のみ、Codex が返す使用済み割合が `1%` 以下の場合にネイティブ TUI の見え方に合わせて `100%` 残りとして表示します。`週間制限` は Codex の返した値どおりに表示します。
+- Codex の週間制限は今回のサーバー更新で返された値どおりに表示します。
 
 ## 更新、バックアップ、復元
 

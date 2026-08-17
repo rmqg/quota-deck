@@ -59,7 +59,7 @@ const translations = {
     beginnerGuideTitle: "小白使用说明",
     beginnerGuideBody: `
       <h3>这个页面能做什么</h3>
-      <p>QuotaDeck 用来集中查看 Codex 和 Claude 的额度：5 小时额度和每周额度。它不查看 OpenAI API 账单；Claude 订阅额度可通过上传 Claude Code 登录文件查看。</p>
+      <p>QuotaDeck 用来集中查看 Codex 的每周额度，以及 Claude 的 5 小时和每周额度。它不查看 OpenAI API 账单；Claude 订阅额度可通过上传 Claude Code 登录文件查看。</p>
       <h3>第一次使用</h3>
       <ol>
         <li>先注册一个本站账号。公开部署时，创建好自己的账号后，应在服务器里把 <code>ALLOW_REGISTRATION</code> 改成 <code>0</code> 并重启容器，避免陌生人注册。</li>
@@ -135,7 +135,7 @@ const translations = {
     beginnerGuideTitle: "新手使用說明",
     beginnerGuideBody: `
       <h3>這個頁面能做什麼</h3>
-      <p>QuotaDeck 用來集中查看 Codex 和 Claude 的額度：5 小時額度和每週額度。它不會查看 OpenAI API 帳單；Claude 訂閱額度可透過上傳 Claude Code 登入檔查看。</p>
+      <p>QuotaDeck 用來集中查看 Codex 的每週額度，以及 Claude 的 5 小時和每週額度。它不會查看 OpenAI API 帳單；Claude 訂閱額度可透過上傳 Claude Code 登入檔查看。</p>
       <h3>第一次使用</h3>
       <ol>
         <li>先註冊一個本站帳號。公開部署時，建立好自己的帳號後，應在伺服器把 <code>ALLOW_REGISTRATION</code> 改成 <code>0</code> 並重啟容器，避免陌生人註冊。</li>
@@ -211,7 +211,7 @@ const translations = {
     beginnerGuideTitle: "Beginner guide",
     beginnerGuideBody: `
       <h3>What this page does</h3>
-      <p>QuotaDeck shows the 5-hour and weekly limits for both Codex and Claude in one place. It does not monitor OpenAI API billing; Claude subscription limits are available by uploading the Claude Code login file.</p>
+      <p>QuotaDeck shows Codex's weekly limit and Claude's 5-hour and weekly limits in one place. It does not monitor OpenAI API billing; Claude subscription limits are available by uploading the Claude Code login file.</p>
       <h3>First-time setup</h3>
       <ol>
         <li>Create a local QuotaDeck account. For public deployments, create your own account first, then set <code>ALLOW_REGISTRATION</code> to <code>0</code> on the server and restart the container.</li>
@@ -287,7 +287,7 @@ const translations = {
     beginnerGuideTitle: "初心者向けガイド",
     beginnerGuideBody: `
       <h3>このページでできること</h3>
-      <p>QuotaDeck は Codex と Claude の 5 時間制限と週間制限をまとめて表示します。OpenAI API の請求利用量は対象外ですが、Claude のサブスク残量は Claude Code のログインファイルをアップロードすると確認できます。</p>
+      <p>QuotaDeck は Codex の週間制限と、Claude の 5 時間制限・週間制限をまとめて表示します。OpenAI API の請求利用量は対象外ですが、Claude のサブスク残量は Claude Code のログインファイルをアップロードすると確認できます。</p>
       <h3>初回利用</h3>
       <ol>
         <li>まず QuotaDeck のローカルアカウントを作成します。公開運用では、自分のアカウントを作成した後、サーバー側で <code>ALLOW_REGISTRATION</code> を <code>0</code> に変更してコンテナを再起動してください。</li>
@@ -435,10 +435,25 @@ function selectedSnapshot(result) {
   return result.rateLimitsByLimitId.codex || Object.values(result.rateLimitsByLimitId)[0] || result.rateLimits;
 }
 
+function weeklyQuotaWindow(snapshot) {
+  for (const window of [snapshot?.weekly, snapshot?.week]) {
+    if (window && typeof window === "object") return window;
+  }
+  return [snapshot?.primary, snapshot?.secondary].find(
+    (window) => Number(window?.windowDurationMins) === 10080,
+  ) || null;
+}
+
+function visibleLimitWindows(account, snapshot) {
+  if (account?.provider === "codex") {
+    return [weeklyQuotaWindow(snapshot)].filter(Boolean);
+  }
+  return [snapshot?.primary, snapshot?.secondary].filter(Boolean);
+}
+
 function remainingPercent(window) {
   const used = Number(window?.usedPercent || 0);
   if (!Number.isFinite(used)) return 100;
-  if (window?.windowDurationMins === 300 && used <= 1) return 100;
   return Math.max(0, Math.min(100, Math.round(100 - used)));
 }
 
@@ -546,7 +561,7 @@ function render() {
     fragment.querySelector(".delete-one").addEventListener("click", () => deleteAccount(account.id));
 
     if (result?.ok && snapshot) {
-      const windows = [snapshot.primary, snapshot.secondary].filter(Boolean);
+      const windows = visibleLimitWindows(account, snapshot);
       limits.replaceChildren(...windows.map(renderLimit));
       message.textContent = isRefreshing ? t("refreshing") : `${t("updatedIn")} ${result.latencyMs}ms`;
       message.classList.remove("error");
@@ -608,7 +623,7 @@ function applyRefreshResults(body) {
 
 async function loadLimits() {
   if (!currentUser) return;
-  const body = await api("/api/limits");
+  const body = await api("/api/limits?refresh=1");
   applyRefreshResults(body);
   render();
 }

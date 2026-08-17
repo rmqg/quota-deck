@@ -2,10 +2,10 @@
 
 **語言**：[简体中文](../README.md) | 繁體中文 | [English](README.en.md) | [日本語](README.ja.md)
 
-QuotaDeck 是一個自託管網頁面板，用來集中查看 OpenAI Codex 和 Anthropic Claude 的兩個額度：
+QuotaDeck 是一個自託管網頁面板，用來集中查看 OpenAI Codex 和 Anthropic Claude 的訂閱額度：
 
-- `5h limit`（5 小時額度）
-- `Weekly limit`（每週額度）
+- Codex：`Weekly limit`（每週額度）
+- Claude：`5h limit`（5 小時額度）和 `Weekly limit`（每週額度）
 
 讀取方式：
 
@@ -232,7 +232,7 @@ READ_API_USERNAME=your-username             # token 對應的使用者名稱
 curl -H "Authorization: Bearer $READ_API_TOKEN" https://your-domain/api/limits
 ```
 
-回傳的就是後台保存的最新快照（`{ "results": [...] }`，結構同網頁用的介面）。
+回傳的就是後台保存的最新快照（`{ "results": [...] }`，結構同網頁用的介面）。網頁首次載入以及 tmux 等需要本輪在線結果的用戶端使用 `GET /api/limits?refresh=1`；帳號之間會平行查詢，同一帳號的重疊請求會自動合併，回傳後才更新顯示。即時 GET 每個來源位址每小時最多 120 次。
 
 安全說明：
 
@@ -263,10 +263,10 @@ curl -H "Authorization: Bearer $READ_API_TOKEN" https://your-domain/api/limits
 
 額度條：
 
-- `5 小時額度`：Codex CLI TUI 裡的 `5h limit`。
-- `每週額度`：Codex CLI TUI 裡的 `Weekly limit`。
+- Codex 只顯示伺服器返回的 10080 分鐘 `每週額度`，不再假設 `primary` 或 `secondary` 是固定視窗。
+- Claude 顯示 `5 小時額度` 和 `每週額度`。
 - 當額度顯示為 `100%` 剩餘時，頁面不顯示重置時間；低於 `100%` 時會顯示重置時間與距離重置還剩多久。
-- 只有 `5 小時額度` 會把 Codex 返回的小於等於 `1%` 已用依照原生 TUI 的觀感顯示為 `100%` 剩餘；`每週額度` 依 Codex 返回值顯示。
+- Codex 的每週額度依伺服器本次返回值顯示。
 
 ## 更新、備份和恢復
 
